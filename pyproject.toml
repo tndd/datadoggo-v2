@@ -11,11 +11,10 @@ where = ["src"]  # `uv pip install -e .`
 
 [dependency-groups]
 dev = [
-    "hypothesis>=6.139.2",
     "pytest>=8.4.2",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["src"]
 python_files = ["*.py"]
-addopts = "-v --hypothesis-show-statistics"
+addopts = "--import-mode=importlib"
