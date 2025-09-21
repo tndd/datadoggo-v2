@@ -18,3 +18,6 @@ dev = [
 testpaths = ["src"]
 python_files = ["*.py"]
 addopts = "--import-mode=importlib"
+
+[tool.ruff]
+select = ["E", "F", "W", "I", "B", "C4", "PL"]
