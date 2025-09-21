@@ -5,3 +5,19 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["src"]  # `uv pip install -e .`
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["src"]
+python_files = ["*.py"]
+addopts = "--import-mode=importlib"
+
+[tool.ruff]
+select = ["E", "F", "W", "I", "B", "C4", "PL"]
