@@ -11,3 +11,4 @@ wheels/
 
 .hypothesis
 .pytest_cache
+.env
