@@ -61,7 +61,9 @@ async def fetch_page_content(url: str, page_timeout: int = 15) -> Tuple[str, str
             await tab.go_to(url)
 
             # ページが読み込まれるまで待機（効率的な単一待機）
-            body_element = await tab.find(tag_name="body", timeout=page_timeout, raise_exc=False)
+            body_element = await tab.find(
+                tag_name="body", timeout=page_timeout, raise_exc=False
+            )
 
             if body_element is None:
                 raise ContentFetchError("body要素が見つかりませんでした")
@@ -89,6 +91,71 @@ async def fetch_page_content(url: str, page_timeout: int = 15) -> Tuple[str, str
             print(f"最初の100文字: {content_text[:100]}")
 
             return content_text, title, current_url
+
+    except Exception as e:
+        if "Chrome" in str(e) or "browser" in str(e).lower():
+            raise BrowserInitError(f"ブラウザ初期化エラー: {str(e)}")
+        else:
+            raise ContentFetchError(f"コンテンツ取得エラー: {str(e)}")
+
+
+async def fetch_page_html(url: str, page_timeout: int = 15) -> Tuple[str, str, str]:
+    """
+    指定されたURLからページ全体のHTMLを取得する
+
+    Args:
+        url: アクセス対象のURL
+        page_timeout: ページロードのタイムアウト時間（秒）
+
+    Returns:
+        Tuple[str, str, str]: (HTMLコンテンツ, タイトル, 現在のURL)
+
+    Raises:
+        BrowserInitError: ブラウザ初期化に失敗した場合
+        ContentFetchError: コンテンツ取得に失敗した場合
+    """
+    try:
+        options = get_browser_options()
+
+        async with Chrome(options=options) as browser:
+            tab = await browser.start()
+
+            # 指定URLにアクセス
+            await tab.go_to(url)
+
+            # ページが読み込まれるまで待機
+            body_element = await tab.find(
+                tag_name="body", timeout=page_timeout, raise_exc=False
+            )
+
+            if body_element is None:
+                raise ContentFetchError("body要素が見つかりませんでした")
+
+            print("ページが読み込まれました")
+
+            # HTML全体を取得
+            html_content = await tab.page_source
+
+            # タイトルを取得
+            try:
+                title_element = await tab.find(
+                    tag_name="title", timeout=2, raise_exc=False
+                )
+                title = await title_element.text if title_element else "Unknown"
+            except Exception:
+                title = "Unknown"
+
+            # 現在のURLを取得
+            try:
+                current_url = await tab.get_url()
+            except Exception:
+                current_url = url
+
+            print(f"HTML長: {len(html_content)}文字")
+            print(f"タイトル: {title}")
+            print(f"最初の100文字: {html_content[:100]}")
+
+            return html_content, title, current_url
 
     except Exception as e:
         if "Chrome" in str(e) or "browser" in str(e).lower():
@@ -129,7 +196,7 @@ def analyze_content(
     return formatted_content, redirect_success, is_bot_blocked
 
 
-def save_content_to_file(content: str, filepath: str = "out.txt") -> None:
+def save_content_to_file(content: str, filepath: str = "out.html") -> None:
     """
     コンテンツをファイルに保存する
 
@@ -174,15 +241,17 @@ async def fetch_news_content(
         Tuple[str, bool, bool]: (コンテンツテキスト, リダイレクト成功フラグ, Bot排除フラグ)
     """
     try:
-        # ページコンテンツを取得
-        content, title, current_url = await fetch_page_content(url, page_timeout)
+        # ページHTML全体を取得
+        content, title, current_url = await fetch_page_html(url, page_timeout)
 
-        # コンテンツを分析
-        formatted_content, redirect_success, is_bot_blocked = analyze_content(
-            content, title, url, current_url
+        # HTML用の簡単な分析（純粋なHTMLを保持）
+        redirect_success = current_url != url
+        is_bot_blocked = any(
+            keyword in content
+            for keyword in ["Access Denied", "Blocked", "403", "Forbidden", "Captcha"]
         )
 
-        return formatted_content, redirect_success, is_bot_blocked
+        return content, redirect_success, is_bot_blocked
 
     except (BrowserInitError, ContentFetchError) as e:
         return handle_fetch_error(e)
