@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Tuple
+from typing import Any, Tuple
 
 from pydoll.browser.chromium import Chrome
 from pydoll.browser.options import ChromiumOptions
@@ -142,32 +142,116 @@ async def extract_article_text(tab, body_element) -> str:
     ]
 
     content = ""
-    for selector in article_selectors:
-        try:
+    try:
+        for selector in article_selectors:
             elements = await tab.query(
                 selector, timeout=2, find_all=True, raise_exc=False
             )
-            if elements:
-                text_parts = []
-                for element in elements:
-                    element_text = await element.text
-                    if element_text and element_text.strip():
-                        text_parts.append(element_text.strip())
+            if not elements:
+                continue
 
-                if text_parts:
-                    content = "\n\n".join(text_parts)
-                    if len(content) > MIN_CONTENT_LENGTH:
-                        break
-        except Exception:
-            continue
+            text_parts = []
+            for element in elements:
+                try:
+                    element_text = await element.text
+                except Exception:
+                    # テキスト取得失敗時は次の要素を試す
+                    continue
+
+                if element_text and element_text.strip():
+                    text_parts.append(element_text.strip())
+
+            if text_parts:
+                content = "\n\n".join(text_parts)
+                if len(content) > MIN_CONTENT_LENGTH:
+                    break
+    except Exception as error:
+        print(f"記事要素の取得でエラー発生: {error}")
 
     # 上記で取得できない場合はbody全体を取得
     if not content or len(content) < MIN_TEXT_LENGTH:
-        body_text = await body_element.text
+        try:
+            body_text = await body_element.text
+        except Exception as error:
+            print(f"body要素からのテキスト取得に失敗: {error}")
+            return content
+
         if body_text and len(body_text) > len(content):
             content = body_text
 
     return content
+
+
+async def _start_browser_tab(browser) -> Any:
+    """ブラウザタブを起動する"""
+
+    try:
+        return await browser.start()
+    except Exception as error:
+        raise BrowserInitError(f"ブラウザ起動に失敗しました: {error}") from error
+
+
+async def _navigate_to_url(tab, url: str) -> None:
+    """指定URLへ遷移する"""
+
+    try:
+        await tab.go_to(url)
+    except Exception as error:
+        raise ContentFetchError(f"URLへのアクセスに失敗しました: {error}") from error
+
+
+async def _find_body_element(tab, page_timeout: int):
+    """body要素を取得する"""
+
+    body_element = await tab.find(
+        tag_name="body",
+        timeout=page_timeout,
+        raise_exc=False,
+    )
+    if body_element is None:
+        raise ContentFetchError("body要素が見つかりませんでした")
+    return body_element
+
+
+async def _retrieve_content(tab, body_element, output_format: OutputFormat) -> str:
+    """出力形式に応じたコンテンツ取得を行う"""
+
+    if output_format == OutputFormat.HTML:
+        try:
+            content = await tab.page_source
+        except Exception as error:
+            raise ContentFetchError(f"HTML取得に失敗しました: {error}") from error
+        print(f"HTML長: {len(content)}文字")
+        return content
+
+    try:
+        content = await extract_article_text(tab, body_element)
+    except Exception as error:
+        raise ContentFetchError(f"テキスト抽出に失敗しました: {error}") from error
+
+    print(f"テキスト長: {len(content)}文字")
+    return content
+
+
+async def _fetch_title(tab) -> str:
+    """ページタイトルを取得する"""
+
+    try:
+        title_element = await tab.find(tag_name="title", timeout=2, raise_exc=False)
+        return await title_element.text if title_element else "Unknown"
+    except Exception as error:
+        print(f"タイトル取得エラー: {error}")
+        return "Unknown"
+
+
+async def _fetch_current_url(tab, fallback_url: str) -> str:
+    """現在のURLを取得する"""
+
+    try:
+        return await tab.get_url()
+    except Exception as error:
+        print(f"URL取得エラー: {error}")
+        return fallback_url
 
 
 async def fetch_page_content_unified(
@@ -188,60 +272,32 @@ async def fetch_page_content_unified(
         BrowserInitError: ブラウザ初期化に失敗した場合
         ContentFetchError: コンテンツ取得に失敗した場合
     """
+    options = get_browser_options()
+
     try:
-        options = get_browser_options()
-
         async with Chrome(options=options) as browser:
-            tab = await browser.start()
+            tab = await _start_browser_tab(browser)
+            await _navigate_to_url(tab, url)
 
-            # 指定URLにアクセス
-            await tab.go_to(url)
-
-            # ページが読み込まれるまで待機
-            body_element = await tab.find(
-                tag_name="body", timeout=page_timeout, raise_exc=False
-            )
-
-            if body_element is None:
-                raise ContentFetchError("body要素が見つかりませんでした")
-
+            body_element = await _find_body_element(tab, page_timeout)
             print("ページが読み込まれました")
 
-            # 出力形式に応じてコンテンツを取得
-            if output_format == OutputFormat.HTML:
-                # HTML全体を取得
-                content = await tab.page_source
-                print(f"HTML長: {len(content)}文字")
-            else:  # TEXT形式
-                # 記事テキストを抽出
-                content = await extract_article_text(tab, body_element)
-                print(f"テキスト長: {len(content)}文字")
-
-            # タイトルを取得
-            try:
-                title_element = await tab.find(
-                    tag_name="title", timeout=2, raise_exc=False
-                )
-                title = await title_element.text if title_element else "Unknown"
-            except Exception:
-                title = "Unknown"
-
-            # 現在のURLを取得
-            try:
-                current_url = await tab.get_url()
-            except Exception:
-                current_url = url
+            content = await _retrieve_content(tab, body_element, output_format)
+            title = await _fetch_title(tab)
+            current_url = await _fetch_current_url(tab, url)
 
             print(f"タイトル: {title}")
             print(f"最初の100文字: {content[:100]}")
 
             return content, title, current_url
-
-    except Exception as e:
-        if "Chrome" in str(e) or "browser" in str(e).lower():
-            raise BrowserInitError(f"ブラウザ初期化エラー: {str(e)}") from e
-        else:
-            raise ContentFetchError(f"コンテンツ取得エラー: {str(e)}") from e
+    except ContentFetchError:
+        raise
+    except BrowserInitError:
+        raise
+    except Exception as error:
+        if "Chrome" in str(error) or "browser" in str(error).lower():
+            raise BrowserInitError(f"ブラウザ初期化エラー: {error}") from error
+        raise ContentFetchError(f"コンテンツ取得エラー: {error}") from error
 
 
 def analyze_content(

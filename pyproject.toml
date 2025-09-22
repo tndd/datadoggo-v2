@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "pydoll-python>=2.8.0",
+    "ruff>=0.13.1",
 ]
 
 [tool.setuptools.packages.find]
@@ -21,5 +22,5 @@ testpaths = ["src"]
 python_files = ["*.py"]
 addopts = "--import-mode=importlib"
 
-[tool.ruff]
+[tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "C4", "PL"]
