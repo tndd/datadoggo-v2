@@ -108,6 +108,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "pydoll-python" },
+    { name = "pytest" },
     { name = "ruff" },
 ]
 
@@ -119,6 +120,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "pydoll-python", specifier = ">=2.8.0" },
+    { name = "pytest", specifier = ">=8.4.2" },
     { name = "ruff", specifier = ">=0.13.1" },
 ]
 
