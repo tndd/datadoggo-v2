@@ -17,6 +17,7 @@ where = ["src"]  # `uv pip install -e .`
 [dependency-groups]
 dev = [
     "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
 ]
 
 [tool.pytest.ini_options]
@@ -26,3 +27,4 @@ addopts = "--import-mode=importlib"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "C4", "PL"]
+ignore = ["PLC0415"]

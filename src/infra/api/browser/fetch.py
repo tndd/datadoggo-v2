@@ -69,14 +69,29 @@ async def _fetch_title(tab) -> str:
         return "Unknown"
 
 
+class Tests:
+    """外部公開関数のテスト"""
+
+    import pytest
+
+    @pytest.mark.asyncio
+    async def test_fetch_page_content(self) -> None:
+        url = "https://example.com"
+        page_content = await fetch_page_content(url)
+        assert page_content.html is not None
+
+
+# 廃止
 async def main() -> None:
-    """簡易動作確認用のメイン関数"""
+    pass
+    # """簡易動作確認用のメイン関数"""
 
-    # test_url = "https://news.google.com/rss/articles/CBMitAFBVV95cUxOazVjXzdVWjB2OEI3NURoWHJqaWlxRnluWkZxTkJwbkNVZjRtODNZWEZXd0tmSnE4UF9QZ29YNnYwN1pISF84NlhfcU5HdDdjNFFjZTN4b3ozM2pITXlfN2lVM0VGbU5od3RTN19WY3lObEZEZnFVQnc2Sy1kUnRXMXFRRXJUTWpNZ2M2U1VwRDlveUk3eExVSlEzRGg4cnRxM1VPRWh5bDA1T0dPcVlPRUNJaG8?oc=5"
-    test_url = "https://example.com"
-    page_content = await fetch_page_content(test_url)
-    print(page_content.html[:100])
+    # # test_url = "https://news.google.com/rss/articles/CBMitAFBVV95cUxOazVjXzdVWjB2OEI3NURoWHJqaWlxRnluWkZxTkJwbkNVZjRtODNZWEZXd0tmSnE4UF9QZ29YNnYwN1pISF84NlhfcU5HdDdjNFFjZTN4b3ozM2pITXlfN2lVM0VGbU5od3RTN19WY3lObEZEZnFVQnc2Sy1kUnRXMXFRRXJUTWpNZ2M2U1VwRDlveUk3eExVSlEzRGg4cnRxM1VPRWh5bDA1T0dPcVlPRUNJaG8?oc=5"
+    # test_url = "https://example.com"
+    # page_content = await fetch_page_content(test_url)
+    # print(page_content.html[:100])
 
 
+# 廃止
 if __name__ == "__main__":
     asyncio.run(main())
