@@ -16,6 +16,12 @@ class OutputFormat(Enum):
     HTML = "html"
 
 
+# 定数定義
+MIN_CONTENT_LENGTH = 100  # 十分なコンテンツがあると判断する最小文字数
+MIN_TEXT_LENGTH = 50  # テキストとして有効と判断する最小文字数
+BOT_BLOCKED_KEYWORDS = ["Access Denied", "Blocked", "403", "Forbidden", "Captcha"]
+
+
 # カスタム例外クラス
 class ContentFetchError(Exception):
     """コンテンツ取得時のエラー"""
@@ -104,9 +110,64 @@ async def fetch_page_content(url: str, page_timeout: int = 15) -> Tuple[str, str
 
     except Exception as e:
         if "Chrome" in str(e) or "browser" in str(e).lower():
-            raise BrowserInitError(f"ブラウザ初期化エラー: {str(e)}")
+            raise BrowserInitError(f"ブラウザ初期化エラー: {str(e)}") from e
         else:
-            raise ContentFetchError(f"コンテンツ取得エラー: {str(e)}")
+            raise ContentFetchError(f"コンテンツ取得エラー: {str(e)}") from e
+
+
+async def extract_article_text(tab, body_element) -> str:
+    """
+    記事コンテンツからテキストを抽出する
+
+    Args:
+        tab: ブラウザタブ
+        body_element: body要素
+
+    Returns:
+        str: 抽出されたテキストコンテンツ
+    """
+    # JavaScriptコンテンツの読み込みを待機
+    print("JavaScriptコンテンツの読み込みを待機中...")
+    await asyncio.sleep(3)  # 追加待機
+
+    # より具体的な要素を探す（記事コンテンツ）
+    article_selectors = [
+        "article",
+        "[data-content-type='article']",
+        ".content",
+        ".article-body",
+        ".post-content",
+        "main",
+        "p",  # 段落要素も試す
+    ]
+
+    content = ""
+    for selector in article_selectors:
+        try:
+            elements = await tab.query(
+                selector, timeout=2, find_all=True, raise_exc=False
+            )
+            if elements:
+                text_parts = []
+                for element in elements:
+                    element_text = await element.text
+                    if element_text and element_text.strip():
+                        text_parts.append(element_text.strip())
+
+                if text_parts:
+                    content = "\n\n".join(text_parts)
+                    if len(content) > MIN_CONTENT_LENGTH:
+                        break
+        except Exception:
+            continue
+
+    # 上記で取得できない場合はbody全体を取得
+    if not content or len(content) < MIN_TEXT_LENGTH:
+        body_text = await body_element.text
+        if body_text and len(body_text) > len(content):
+            content = body_text
+
+    return content
 
 
 async def fetch_page_content_unified(
@@ -152,53 +213,8 @@ async def fetch_page_content_unified(
                 content = await tab.page_source
                 print(f"HTML長: {len(content)}文字")
             else:  # TEXT形式
-                # JavaScriptコンテンツの読み込みを待機
-                print("JavaScriptコンテンツの読み込みを待機中...")
-                await asyncio.sleep(3)  # 追加待機
-
-                # body要素のテキストを再取得
-                try:
-                    # より具体的な要素を探す（記事コンテンツ）
-                    article_selectors = [
-                        "article",
-                        "[data-content-type='article']",
-                        ".content",
-                        ".article-body",
-                        ".post-content",
-                        "main",
-                        "p",  # 段落要素も試す
-                    ]
-
-                    content = ""
-                    for selector in article_selectors:
-                        try:
-                            elements = await tab.query(
-                                selector, timeout=2, find_all=True, raise_exc=False
-                            )
-                            if elements:
-                                text_parts = []
-                                for element in elements:
-                                    element_text = await element.text
-                                    if element_text and element_text.strip():
-                                        text_parts.append(element_text.strip())
-
-                                if text_parts:
-                                    content = "\n\n".join(text_parts)
-                                    if len(content) > 100:  # 十分なコンテンツがある場合
-                                        break
-                        except Exception:
-                            continue
-
-                    # 上記で取得できない場合はbody全体を取得
-                    if not content or len(content) < 50:
-                        body_text = await body_element.text
-                        if body_text and len(body_text) > len(content):
-                            content = body_text
-
-                except Exception as e:
-                    print(f"テキスト取得エラー: {str(e)}")
-                    content = await body_element.text
-
+                # 記事テキストを抽出
+                content = await extract_article_text(tab, body_element)
                 print(f"テキスト長: {len(content)}文字")
 
             # タイトルを取得
@@ -223,9 +239,9 @@ async def fetch_page_content_unified(
 
     except Exception as e:
         if "Chrome" in str(e) or "browser" in str(e).lower():
-            raise BrowserInitError(f"ブラウザ初期化エラー: {str(e)}")
+            raise BrowserInitError(f"ブラウザ初期化エラー: {str(e)}") from e
         else:
-            raise ContentFetchError(f"コンテンツ取得エラー: {str(e)}")
+            raise ContentFetchError(f"コンテンツ取得エラー: {str(e)}") from e
 
 
 def analyze_content(
@@ -241,13 +257,17 @@ def analyze_content(
         current_url: 現在のURL
 
     Returns:
-        Tuple[str, bool, bool]: (フォーマット済みコンテンツ, リダイレクト成功フラグ, Bot排除フラグ)
+        Tuple[str, bool, bool]: (
+            フォーマット済みコンテンツ,
+            リダイレクト成功フラグ,
+            Bot排除フラグ
+        )
     """
     # リダイレクト成功を確認
     redirect_success = current_url != original_url
 
     # Bot排除を確認
-    bot_blocked_keywords = ["Access Denied", "Blocked", "403", "Forbidden", "Captcha"]
+    bot_blocked_keywords = BOT_BLOCKED_KEYWORDS
     is_bot_blocked = any(keyword in content for keyword in bot_blocked_keywords)
 
     # テキストコンテンツを整形
@@ -350,10 +370,7 @@ async def fetch_news_content(
 
         # 簡単な分析（純粋なコンテンツを保持）
         redirect_success = current_url != url
-        is_bot_blocked = any(
-            keyword in content
-            for keyword in ["Access Denied", "Blocked", "403", "Forbidden", "Captcha"]
-        )
+        is_bot_blocked = any(keyword in content for keyword in BOT_BLOCKED_KEYWORDS)
 
         return content, redirect_success, is_bot_blocked
 
