@@ -1,9 +1,19 @@
 import asyncio
 import os
+from datetime import datetime
+from enum import Enum
+from pathlib import Path
 from typing import Tuple
 
 from pydoll.browser.chromium import Chrome
 from pydoll.browser.options import ChromiumOptions
+
+
+class OutputFormat(Enum):
+    """出力形式の列挙型"""
+
+    TEXT = "txt"
+    HTML = "html"
 
 
 # カスタム例外クラス
@@ -99,16 +109,19 @@ async def fetch_page_content(url: str, page_timeout: int = 15) -> Tuple[str, str
             raise ContentFetchError(f"コンテンツ取得エラー: {str(e)}")
 
 
-async def fetch_page_html(url: str, page_timeout: int = 15) -> Tuple[str, str, str]:
+async def fetch_page_content_unified(
+    url: str, output_format: OutputFormat = OutputFormat.HTML, page_timeout: int = 15
+) -> Tuple[str, str, str]:
     """
-    指定されたURLからページ全体のHTMLを取得する
+    指定されたURLからページコンテンツを取得する（統合版）
 
     Args:
         url: アクセス対象のURL
+        output_format: 出力形式（TEXT or HTML）
         page_timeout: ページロードのタイムアウト時間（秒）
 
     Returns:
-        Tuple[str, str, str]: (HTMLコンテンツ, タイトル, 現在のURL)
+        Tuple[str, str, str]: (コンテンツ, タイトル, 現在のURL)
 
     Raises:
         BrowserInitError: ブラウザ初期化に失敗した場合
@@ -133,8 +146,15 @@ async def fetch_page_html(url: str, page_timeout: int = 15) -> Tuple[str, str, s
 
             print("ページが読み込まれました")
 
-            # HTML全体を取得
-            html_content = await tab.page_source
+            # 出力形式に応じてコンテンツを取得
+            if output_format == OutputFormat.HTML:
+                # HTML全体を取得
+                content = await tab.page_source
+                print(f"HTML長: {len(content)}文字")
+            else:  # TEXT形式
+                # body要素のテキストを取得
+                content = await body_element.text
+                print(f"テキスト長: {len(content)}文字")
 
             # タイトルを取得
             try:
@@ -151,11 +171,10 @@ async def fetch_page_html(url: str, page_timeout: int = 15) -> Tuple[str, str, s
             except Exception:
                 current_url = url
 
-            print(f"HTML長: {len(html_content)}文字")
             print(f"タイトル: {title}")
-            print(f"最初の100文字: {html_content[:100]}")
+            print(f"最初の100文字: {content[:100]}")
 
-            return html_content, title, current_url
+            return content, title, current_url
 
     except Exception as e:
         if "Chrome" in str(e) or "browser" in str(e).lower():
@@ -196,20 +215,57 @@ def analyze_content(
     return formatted_content, redirect_success, is_bot_blocked
 
 
-def save_content_to_file(content: str, filepath: str = "out.html") -> None:
+def generate_timestamped_filename(
+    output_format: OutputFormat, output_dir: str = "mock"
+) -> str:
+    """
+    タイムスタンプ付きファイル名を生成する
+
+    Args:
+        output_format: 出力形式
+        output_dir: 出力ディレクトリ
+
+    Returns:
+        str: タイムスタンプ付きファイルパス
+    """
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"out_{timestamp}.{output_format.value}"
+    return os.path.join(output_dir, filename)
+
+
+def save_content_to_file(
+    content: str,
+    output_format: OutputFormat = OutputFormat.HTML,
+    filepath: str = None,
+    output_dir: str = "mock",
+) -> str:
     """
     コンテンツをファイルに保存する
 
     Args:
         content: 保存するコンテンツ
-        filepath: 保存先ファイルパス
+        output_format: 出力形式
+        filepath: 保存先ファイルパス（Noneの場合は自動生成）
+        output_dir: 出力ディレクトリ
+
+    Returns:
+        str: 実際の保存先ファイルパス
     """
     try:
+        # ファイルパスが指定されていない場合は自動生成
+        if filepath is None:
+            filepath = generate_timestamped_filename(output_format, output_dir)
+
+        # ディレクトリが存在しない場合は作成
+        Path(os.path.dirname(filepath)).mkdir(parents=True, exist_ok=True)
+
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(content)
         print(f"\nコンテンツを {filepath} に保存しました。")
+        return filepath
     except Exception as e:
         print(f"ファイル保存エラー: {str(e)}")
+        return ""
 
 
 def handle_fetch_error(error: Exception) -> Tuple[str, bool, bool]:
@@ -228,23 +284,26 @@ def handle_fetch_error(error: Exception) -> Tuple[str, bool, bool]:
 
 
 async def fetch_news_content(
-    url: str, page_timeout: int = 15
+    url: str, output_format: OutputFormat = OutputFormat.HTML, page_timeout: int = 15
 ) -> Tuple[str, bool, bool]:
     """
     ニュースコンテンツを取得する（メイン関数）
 
     Args:
         url: ニュース記事のURL
+        output_format: 出力形式（TEXT or HTML）
         page_timeout: ページロードのタイムアウト時間（秒）
 
     Returns:
-        Tuple[str, bool, bool]: (コンテンツテキスト, リダイレクト成功フラグ, Bot排除フラグ)
+        Tuple[str, bool, bool]: (コンテンツ, リダイレクト成功フラグ, Bot排除フラグ)
     """
     try:
-        # ページHTML全体を取得
-        content, title, current_url = await fetch_page_html(url, page_timeout)
+        # 統合されたコンテンツ取得関数を使用
+        content, title, current_url = await fetch_page_content_unified(
+            url, output_format, page_timeout
+        )
 
-        # HTML用の簡単な分析（純粋なHTMLを保持）
+        # 簡単な分析（純粋なコンテンツを保持）
         redirect_success = current_url != url
         is_bot_blocked = any(
             keyword in content
@@ -259,25 +318,64 @@ async def fetch_news_content(
         return handle_fetch_error(e)
 
 
-async def main():
-    """メイン実行関数"""
-    # Google NewsのRSS記事URL
-    google_news_url = "https://news.google.com/rss/articles/CBMiyAFBVV95cUxOWS1JeXBabU5BTkZaMWgyVFAzRlA0WDlpT0NTYjFEQnNkeWhpd3dtcGt6aU9pVFYzZGRQbVVBTENZcVhqb19RLWw0QkJtUFhoQnkzb3d2WjIyOXZHY0VRMWNZUUVTQ3JQRktpUUQ4NXAyYUkxdEFIcmFNUEZjWVZfWDVxVEN0ak9YRzEyYlZnTW5Zd05UMERMZmNVWDd4cWs0b1M3c0pUcWFaWC04b21CTjBPNkZNVHZ5UEZrNzNnNHh2dC1CNzRUbw?oc=5"
+async def fetch_and_save_content(
+    url: str,
+    output_format: OutputFormat = OutputFormat.HTML,
+    output_dir: str = "mock",
+    page_timeout: int = 15,
+) -> str:
+    """
+    URLからコンテンツを取得し、ファイルに保存する一貫処理関数
 
-    print("ニュースコンテンツを取得中...")
+    Args:
+        url: 取得対象のURL
+        output_format: 出力形式（TEXT or HTML）
+        output_dir: 出力ディレクトリ
+        page_timeout: ページロードのタイムアウト時間（秒）
+
+    Returns:
+        str: 保存されたファイルのパス
+    """
+    print(f"コンテンツを取得中... ({output_format.value}形式)")
 
     # コンテンツ取得
-    content, redirect_success, bot_blocked = await fetch_news_content(google_news_url)
+    content, redirect_success, bot_blocked = await fetch_news_content(
+        url, output_format, page_timeout
+    )
 
     # 結果を表示
     print("=== 取得結果 ===")
-    print(content)
+    print(f"形式: {output_format.value}")
+    print(f"文字数: {len(content)}文字")
+    print(f"最初の100文字: {content[:100]}")
     print("\n=== 検証結果 ===")
     print(f"リダイレクト成功: {redirect_success}")
     print(f"Bot排除: {bot_blocked}")
 
     # ファイルに保存
-    save_content_to_file(content)
+    filepath = save_content_to_file(content, output_format, None, output_dir)
+
+    return filepath
+
+
+async def main():
+    """メイン実行関数"""
+    # Google NewsのRSS記事URL
+    google_news_url = "https://news.google.com/rss/articles/CBMiyAFBVV95cUxOWS1JeXBabU5BTkZaMWgyVFAzRlA0WDlpT0NTYjFEQnNkeWhpd3dtcGt6aU9pVFYzZGRQbVVBTENZcVhqb19RLWw0QkJtUFhoQnkzb3d2WjIyOXZHY0VRMWNZUUVTQ3JQRktpUUQ4NXAyYUkxdEFIcmFNUEZjWVZfWDVxVEN0ak9YRzEyYlZnTW5Zd05UMERMZmNVWDd4cWs0b1M3c0pUcWFaWC04b21CTjBPNkZNVHZ5UEZrNzNnNHh2dC1CNzRUbw?oc=5"
+
+    # HTML形式でコンテンツを取得・保存
+    html_filepath = await fetch_and_save_content(
+        google_news_url, OutputFormat.HTML, "mock"
+    )
+
+    print(f"\nHTML形式で保存完了: {html_filepath}")
+
+    # TEXT 形式でも取得・保存（比較のため）
+    text_filepath = await fetch_and_save_content(
+        google_news_url, OutputFormat.TEXT, "mock"
+    )
+
+    print(f"TEXT形式で保存完了: {text_filepath}")
 
 
 if __name__ == "__main__":
