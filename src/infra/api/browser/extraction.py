@@ -72,3 +72,76 @@ async def extract_article_text(tab, body_element) -> str:
             content = body_text
 
     return content
+
+
+# tests.extract_article_text
+class _MockElement:
+    """テキスト取得を模倣するモック要素"""
+
+    def __init__(self, text_value: str, should_raise: bool = False) -> None:
+        self._text_value = text_value
+        self._should_raise = should_raise
+
+    @property
+    def text(self):
+        async def _get_text() -> str:
+            if self._should_raise:
+                raise RuntimeError("テキスト取得に失敗")
+            return self._text_value
+
+        return _get_text()
+
+
+class _MockTab:
+    """query呼び出しを制御するモックタブ"""
+
+    def __init__(self, elements_map: dict[str, list[_MockElement]]) -> None:
+        self._elements_map = elements_map
+
+    async def query(self, selector, timeout=2, find_all=True, raise_exc=False):
+        return self._elements_map.get(selector, [])
+
+
+def _run_extract(tab: _MockTab, body: _MockElement) -> str:
+    """共通の実行ラッパ"""
+
+    return asyncio.run(extract_article_text(tab, body))
+
+
+class TestsExtractArticleText:
+    # docs:
+    #   目的: 記事要素が十分なテキストを持つ場合に本文が優先されることを確認する
+    #   検証観点: セレクタ取得・結合ロジックがMIN_CONTENT_LENGTHを基準に動作する
+    def test_prefers_article_content_when_sufficient(self) -> None:
+        article_texts = ["本文" * 40, "続き" * 40]
+        tab = _MockTab({"article": [_MockElement(text) for text in article_texts]})
+        body = _MockElement("ボディフォールバック")
+
+        content = _run_extract(tab, body)
+
+        expected = "\n\n".join(article_texts)
+        assert content == expected
+
+    # docs:
+    #   目的: 記事要素が空の場合にbodyテキストへフォールバックする挙動を担保する
+    #   検証観点: セレクタからの取得結果が不足してもbody.textが採用される
+    def test_falls_back_to_body_when_article_insufficient(self) -> None:
+        tab = _MockTab({"article": [_MockElement("   "), _MockElement("")]})
+        body_text = "ボディテキスト" * 10
+        body = _MockElement(body_text)
+
+        content = _run_extract(tab, body)
+
+        assert content == body_text
+
+    # docs:
+    #   目的: 要素取得で例外が発生しても処理が続きフォールバックできるかを確認
+    #   検証観点: 要素.text失敗時にスキップしbodyテキストを返すか
+    def test_ignores_element_errors_and_uses_body(self) -> None:
+        tab = _MockTab({"article": [_MockElement("本文", should_raise=True)]})
+        body_text = "例外時フォールバック" * 5
+        body = _MockElement(body_text)
+
+        content = _run_extract(tab, body)
+
+        assert content == body_text
