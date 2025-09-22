@@ -152,8 +152,53 @@ async def fetch_page_content_unified(
                 content = await tab.page_source
                 print(f"HTML長: {len(content)}文字")
             else:  # TEXT形式
-                # body要素のテキストを取得
-                content = await body_element.text
+                # JavaScriptコンテンツの読み込みを待機
+                print("JavaScriptコンテンツの読み込みを待機中...")
+                await asyncio.sleep(3)  # 追加待機
+
+                # body要素のテキストを再取得
+                try:
+                    # より具体的な要素を探す（記事コンテンツ）
+                    article_selectors = [
+                        "article",
+                        "[data-content-type='article']",
+                        ".content",
+                        ".article-body",
+                        ".post-content",
+                        "main",
+                        "p",  # 段落要素も試す
+                    ]
+
+                    content = ""
+                    for selector in article_selectors:
+                        try:
+                            elements = await tab.query(
+                                selector, timeout=2, find_all=True, raise_exc=False
+                            )
+                            if elements:
+                                text_parts = []
+                                for element in elements:
+                                    element_text = await element.text
+                                    if element_text and element_text.strip():
+                                        text_parts.append(element_text.strip())
+
+                                if text_parts:
+                                    content = "\n\n".join(text_parts)
+                                    if len(content) > 100:  # 十分なコンテンツがある場合
+                                        break
+                        except Exception:
+                            continue
+
+                    # 上記で取得できない場合はbody全体を取得
+                    if not content or len(content) < 50:
+                        body_text = await body_element.text
+                        if body_text and len(body_text) > len(content):
+                            content = body_text
+
+                except Exception as e:
+                    print(f"テキスト取得エラー: {str(e)}")
+                    content = await body_element.text
+
                 print(f"テキスト長: {len(content)}文字")
 
             # タイトルを取得
@@ -361,7 +406,8 @@ async def fetch_and_save_content(
 async def main():
     """メイン実行関数"""
     # Google NewsのRSS記事URL
-    google_news_url = "https://news.google.com/rss/articles/CBMiyAFBVV95cUxOWS1JeXBabU5BTkZaMWgyVFAzRlA0WDlpT0NTYjFEQnNkeWhpd3dtcGt6aU9pVFYzZGRQbVVBTENZcVhqb19RLWw0QkJtUFhoQnkzb3d2WjIyOXZHY0VRMWNZUUVTQ3JQRktpUUQ4NXAyYUkxdEFIcmFNUEZjWVZfWDVxVEN0ak9YRzEyYlZnTW5Zd05UMERMZmNVWDd4cWs0b1M3c0pUcWFaWC04b21CTjBPNkZNVHZ5UEZrNzNnNHh2dC1CNzRUbw?oc=5"
+    # google_news_url = "https://news.google.com/rss/articles/CBMiyAFBVV95cUxOWS1JeXBabU5BTkZaMWgyVFAzRlA0WDlpT0NTYjFEQnNkeWhpd3dtcGt6aU9pVFYzZGRQbVVBTENZcVhqb19RLWw0QkJtUFhoQnkzb3d2WjIyOXZHY0VRMWNZUUVTQ3JQRktpUUQ4NXAyYUkxdEFIcmFNUEZjWVZfWDVxVEN0ak9YRzEyYlZnTW5Zd05UMERMZmNVWDd4cWs0b1M3c0pUcWFaWC04b21CTjBPNkZNVHZ5UEZrNzNnNHh2dC1CNzRUbw?oc=5"
+    google_news_url = "https://news.google.com/read/CBMidkFVX3lxTFBBQmZUaVRZalQwVkh4OUhpdHBfZlh3OVE4UVFCNldUVk81N1RLN2gyMkYyejREWUREU3BubGlibXA3SWVmWG1KcHNtSUtKVGcwc0VyTFlfY3kyekxXR3Y0UzRKS2VxWlNnZzE5dTd1RjRPOFRjU2c?hl=ja&gl=JP&ceid=JP%3Aja"
 
     # HTML形式でコンテンツを取得・保存
     html_filepath = await fetch_and_save_content(
