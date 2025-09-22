@@ -189,20 +189,22 @@ async def main():
         "UVFCNldUVk81N1RLN2gyMkYyejREWUREU3BubGlibXA3SWVmWG1KcHNtSUtKVGcwc0VyTFlfY3ky"
         "ekxXR3Y0UzRKS2VxWlNnZzE5dTd1RjRPOFRjU2c?hl=ja&gl=JP&ceid=JP%3Aja"
     )
+    content, redirect_success, bot_blocked = await fetch_page_content(google_news_url)
+    print(content)
 
-    html_filepath = await fetch_and_save_content(
-        google_news_url,
-        FetchFormat.HTML,
-        "mock",
-    )
-    print(f"\nHTML形式で保存完了: {html_filepath}")
+    # html_filepath = await fetch_and_save_content(
+    #     google_news_url,
+    #     FetchFormat.HTML,
+    #     "mock",
+    # )
+    # print(f"\nHTML形式で保存完了: {html_filepath}")
 
-    text_filepath = await fetch_and_save_content(
-        google_news_url,
-        FetchFormat.TEXT,
-        "mock",
-    )
-    print(f"TEXT形式で保存完了: {text_filepath}")
+    # text_filepath = await fetch_and_save_content(
+    #     google_news_url,
+    #     FetchFormat.TEXT,
+    #     "mock",
+    # )
+    # print(f"TEXT形式で保存完了: {text_filepath}")
 
 
 if __name__ == "__main__":
