@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>テクノロジーニュース - DataDoggo テストサイト</title>
+    <meta name="description" content="最新のテクノロジーニュースとプログラミング情報をお届けします">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 20px; }
+        header { background: #333; color: white; padding: 20px; margin: -20px -20px 20px; }
+        h1 { margin: 0; font-size: 2em; }
+        nav { margin-top: 10px; }
+        nav a { color: #61dafb; text-decoration: none; margin-right: 20px; }
+        article { margin: 20px 0; padding: 20px; border: 1px solid #eee; }
+        .meta { color: #666; font-size: 0.9em; margin-bottom: 10px; }
+        code { background: #f5f5f5; padding: 2px 5px; border-radius: 3px; }
+        blockquote { border-left: 4px solid #ddd; margin: 16px 0; padding-left: 16px; color: #666; }
+        ul li { margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>DataDoggo テストサイト</h1>
+        <nav>
+            <a href="#tech">テクノロジー</a>
+            <a href="#programming">プログラミング</a>
+            <a href="#ai">AI・機械学習</a>
+            <a href="#web">Web開発</a>
+        </nav>
+    </header>
+
+    <main>
+        <article id="tech">
+            <h2>Rust言語の新機能について</h2>
+            <div class="meta">2024年1月15日 | カテゴリ: プログラミング</div>
+            <p>Rustの最新バージョンでは、以下の新機能が追加されました：</p>
+            <ul>
+                <li><strong>パターンマッチングの改善</strong> - より柔軟な条件分岐が可能に</li>
+                <li><strong>非同期処理の最適化</strong> - <code>async/await</code>のパフォーマンス向上</li>
+                <li><strong>エラーハンドリングの強化</strong> - <code>Result</code>型の新しいメソッド</li>
+            </ul>
+            <blockquote>
+                「Rustは安全性とパフォーマンスを両立する言語として、ますます注目を集めています」
+                - Mozilla Developer Network
+            </blockquote>
+        </article>
+
+        <article id="programming">
+            <h2>Python 3.12の新機能解説</h2>
+            <div class="meta">2024年1月10日 | カテゴリ: Python</div>
+            <p>Python 3.12では以下の機能が注目されています：</p>
+            <ol>
+                <li><code>f-string</code>の高速化（最大30%の性能向上）</li>
+                <li>新しい型ヒント機能の追加</li>
+                <li>標準ライブラリの改善</li>
+            </ol>
+            <p>特に<code>pathlib</code>モジュールの拡張により、ファイル操作がより直感的になりました。</p>
+        </article>
+
+        <article id="ai">
+            <h2>機械学習フレームワーク比較</h2>
+            <div class="meta">2024年1月5日 | カテゴリ: AI・機械学習</div>
+            <p>現在主流の機械学習フレームワークを比較してみました：</p>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="background: #f5f5f5;">
+                    <th style="padding: 10px; border: 1px solid #ddd;">フレームワーク</th>
+                    <th style="padding: 10px; border: 1px solid #ddd;">特徴</th>
+                    <th style="padding: 10px; border: 1px solid #ddd;">適用領域</th>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">TensorFlow</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">Google開発、本格運用向け</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">大規模システム</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">PyTorch</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">研究開発に最適</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">プロトタイピング</td>
+                </tr>
+            </table>
+        </article>
+
+        <section id="web">
+            <h2>Web開発のベストプラクティス</h2>
+            <div class="meta">2024年1月1日 | カテゴリ: Web開発</div>
+            <p>モダンWeb開発で重要なポイント：</p>
+            <h3>フロントエンド</h3>
+            <ul>
+                <li>レスポンシブデザインの実装</li>
+                <li>アクセシビリティの考慮</li>
+                <li>パフォーマンス最適化</li>
+            </ul>
+            <h3>バックエンド</h3>
+            <ul>
+                <li>API設計の原則</li>
+                <li>データベース最適化</li>
+                <li>セキュリティ対策</li>
+            </ul>
+        </section>
+    </main>
+
+    <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #666;">
+        <p>&copy; 2024 DataDoggo テストサイト. All rights reserved.</p>
+        <p>このページはfetch.pyのテスト用に作成されたモックHTMLです。</p>
+    </footer>
+
+    <!-- テスト用の隠し要素 -->
+    <div id="test-data" style="display: none;">
+        <span data-test="title">テクノロジーニュース</span>
+        <span data-test="category">technology</span>
+        <span data-test="article-count">4</span>
+    </div>
+</body>
+</html>
