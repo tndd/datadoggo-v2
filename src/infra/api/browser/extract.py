@@ -1,6 +1,7 @@
 """ブラウザから記事コンテンツを抽出するロジック"""
 
 from enum import Enum
+from typing import Callable
 
 import html2text
 from bs4 import BeautifulSoup
@@ -59,6 +60,10 @@ def _parse_to_markdown(html: str) -> str:
 
 ### TEST ###
 class Tests:
+    from infra.storage.file.load import load_file
+
+    load_file: Callable[[str], str]
+
     def test_extract_page_content(self) -> None:
         """
         docs:
@@ -69,9 +74,7 @@ class Tests:
                 - MARKDOWN モードはMarkdown形式に変換される
                 - 不正なモードの場合はValueErrorが発生する
         """
-        from infra.storage.file.load import load_file
-
-        html = load_file("src/infra/api/browser/mock/plain.html")
+        html = Tests.load_file("src/infra/api/browser/mock/plain.html")
 
         # HTMLモード
         result_html = extract_page_content(html, ExtractMode.HTML)
@@ -104,9 +107,7 @@ class Tests:
                     - スクリプトやスタイルが除去される
                     - テキスト内容が適切に抽出される
             """
-            from infra.storage.file.load import load_file
-
-            html = load_file("src/infra/api/browser/mock/plain.html")
+            html = Tests.load_file("src/infra/api/browser/mock/plain.html")
             text = _parse_to_text(html)
 
             assert text is not None
@@ -125,9 +126,7 @@ class Tests:
                     - 見出しが # 記法になる
                     - リストやテーブルが適切に変換される
             """
-            from infra.storage.file.load import load_file
-
-            html = load_file("src/infra/api/browser/mock/plain.html")
+            html = Tests.load_file("src/infra/api/browser/mock/plain.html")
             markdown = _parse_to_markdown(html)
 
             assert markdown is not None
