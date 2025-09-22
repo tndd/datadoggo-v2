@@ -75,6 +75,7 @@ class Tests:
     import pytest
 
     @pytest.mark.asyncio
+    @pytest.mark.online
     async def test_fetch_page_content(self) -> None:
         url = "https://example.com"
         page_content = await fetch_page_content(url)

@@ -23,7 +23,10 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["src"]
 python_files = ["*.py"]
-addopts = "--import-mode=importlib"
+addopts = "--import-mode=importlib -m 'not online'"
+markers = [
+    "online: marks tests as requiring internet connection (deselect with '-m \"not online\"')"
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "C4", "PL"]
