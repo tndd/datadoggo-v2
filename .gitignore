@@ -12,6 +12,6 @@ wheels/
 
 .hypothesis/
 .pytest_cache/
-mock/
+/mock/
 
 .env
