@@ -18,32 +18,37 @@ class PageContent(BaseModel):
 
 async def fetch_page_content(url: str) -> PageContent:
     """指定URLからHTMLとメタ情報を取得する"""
-    TIMEOUT = 3
-
-    options = get_browser_options()
+    options = _get_browser_options()
 
     async with Chrome(options=options) as browser:
-        tab = await browser.start()
-        await tab.go_to(url)
-
-        # body要素が読み込まれるまで待機（エラー時は続行）
-        try:
-            await tab.find("body", timeout=TIMEOUT)
-        except Exception:
-            pass  # body要素が見つからなくても続行
-        print("ページが読み込まれました")
-
-        html = await tab.page_source
-        title = await fetch_title(tab)
-
-        print(f"HTML長: {len(html)}文字")
-        print(f"タイトル: {title}")
-        print(f"最初の100文字: {html[:100]}")
-
-        return PageContent(url=url, title=title, html=html)
+        return await _operate_browser(browser, url)
 
 
-def get_browser_options() -> ChromiumOptions:
+async def _operate_browser(browser, url: str) -> PageContent:
+    """ブラウザを操作しURLからコンテンツを取得する"""
+    TIMEOUT = 3
+
+    tab = await browser.start()
+    await tab.go_to(url)
+
+    # body要素が読み込まれるまで待機（エラー時は続行）
+    try:
+        await tab.find("body", timeout=TIMEOUT)
+    except Exception:
+        pass  # body要素が見つからなくても続行
+    print("ページが読み込まれました")
+
+    html = await tab.page_source
+    title = await _fetch_title(tab)
+
+    print(f"HTML長: {len(html)}文字")
+    print(f"タイトル: {title}")
+    print(f"最初の100文字: {html[:100]}")
+
+    return PageContent(url=url, title=title, html=html)
+
+
+def _get_browser_options() -> ChromiumOptions:
     """Chromium起動オプションを構築する"""
 
     options = ChromiumOptions()
@@ -53,7 +58,7 @@ def get_browser_options() -> ChromiumOptions:
     return options
 
 
-async def fetch_title(tab) -> str:
+async def _fetch_title(tab) -> str:
     """ページタイトルを取得する"""
 
     try:
