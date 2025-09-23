@@ -22,7 +22,8 @@ def _resolve_path(path: str) -> Path:
         frame = currentframe()
         caller: Optional[FrameType] = None
         try:
-            caller = frame.f_back if frame else None
+            # load_file -> _resolve_path の呼び出しなので、2階層上の呼び出し元を取得
+            caller = frame.f_back.f_back if frame and frame.f_back else None
             caller_file = (
                 Path(caller.f_code.co_filename).resolve()
                 if caller
