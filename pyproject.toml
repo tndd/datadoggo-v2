@@ -4,7 +4,14 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "pydantic>=2.11.9",
+    "pydoll-python>=2.8.0",
+    "pytest>=8.4.2",
+    "ruff>=0.13.1",
+    "beautifulsoup4>=4.12.0",
+    "html2text>=2024.2.26",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]  # `uv pip install -e .`
@@ -12,12 +19,17 @@ where = ["src"]  # `uv pip install -e .`
 [dependency-groups]
 dev = [
     "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["src"]
 python_files = ["*.py"]
-addopts = "--import-mode=importlib"
+addopts = "--import-mode=importlib -m 'not online'"
+markers = [
+    "online: marks tests as requiring internet connection (deselect with '-m \"not online\"')"
+]
 
-[tool.ruff]
+[tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "C4", "PL"]
+ignore = ["PLC0415"]

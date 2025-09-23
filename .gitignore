@@ -9,6 +9,9 @@ wheels/
 # Virtual environments
 .venv
 
-.hypothesis
-.pytest_cache
+
+.hypothesis/
+.pytest_cache/
+/mock/
+
 .env
