@@ -107,7 +107,7 @@ class Tests:
                     - スクリプトやスタイルが除去される
                     - テキスト内容が適切に抽出される
             """
-            html = Tests.load_file("src/infra/api/browser/fixture/plain.html")
+            html = Tests.load_file("./fixture/plain.html")
             text = _parse_to_text(html)
 
             assert text is not None
