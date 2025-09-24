@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Optional
 
 import boto3
@@ -6,11 +5,7 @@ import zstandard as zstd
 from botocore.exceptions import ClientError
 from moto import mock_aws
 
-
-def generate_timestamped_key(prefix: str = "content") -> str:
-    """タイムスタンプ付きオブジェクトキーを生成する"""
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return f"{prefix}_{timestamp}.html.zst"
+from src.infra.compute import generate_timestamped_key
 
 
 def save_html_content(
@@ -49,7 +44,9 @@ def save_html_content(
                 s3_client.create_bucket(Bucket=bucket_name)
 
         # オブジェクトキー決定
-        resolved_key = object_key or generate_timestamped_key(prefix)
+        resolved_key = object_key or generate_timestamped_key(
+            prefix, extension="html.zst"
+        )
 
         # オブジェクト保存
         s3_client.put_object(
@@ -167,7 +164,7 @@ class Tests:
                 - プレフィックスが正しく反映される。
                 - html.zst拡張子が付与される。
         """
-        key = generate_timestamped_key("test")
+        key = generate_timestamped_key("test", extension="html.zst")
         assert key.startswith("test_")
         assert key.endswith(".html.zst")
         # タイムスタンプ部分の長さチェック (YYYYMMDD_HHMMSS = 15文字)

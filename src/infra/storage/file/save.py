@@ -1,7 +1,10 @@
-from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Optional
+
+from src.infra.compute import (
+    generate_timestamped_filename as _generate_timestamped_filename,
+)
 
 
 class SaveFormat(Enum):
@@ -13,10 +16,9 @@ class SaveFormat(Enum):
 
 def generate_timestamped_filename(format: SaveFormat, output_dir: str = "mock") -> str:
     """タイムスタンプ付きファイルパスを生成する"""
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"out_{timestamp}.{format.value}"
-    return str(Path(output_dir) / filename)
+    return _generate_timestamped_filename(
+        prefix="out", extension=format.value, output_dir=output_dir
+    )
 
 
 def save_content_to_file(
