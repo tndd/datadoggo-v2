@@ -35,50 +35,6 @@ services:
       timeout: 3s
       retries: 3
 
-  # 本番/開発用Garage
-  garage:
-    image: dxflrs/garage:v1.0.1
-    environment:
-      GARAGE_RPC_BIND_ADDR: 0.0.0.0:3901
-      GARAGE_RPC_PUBLIC_ADDR: garage:3901
-      GARAGE_API_BIND_ADDR: 0.0.0.0:3900
-      GARAGE_ADMIN_TOKEN: datadoggo_admin_token
-    volumes:
-      - garage_data:/data
-      - garage_meta:/meta
-    ports:
-      - "15900:3900"  # S3 API
-      - "15901:3901"  # RPC
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3900/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
-  # テスト用Garage
-  garage-test:
-    image: dxflrs/garage:v1.0.1
-    environment:
-      GARAGE_RPC_BIND_ADDR: 0.0.0.0:3901
-      GARAGE_RPC_PUBLIC_ADDR: garage-test:3901
-      GARAGE_API_BIND_ADDR: 0.0.0.0:3900
-      GARAGE_ADMIN_TOKEN: datadoggo_test_admin_token
-    volumes:
-      - garage_test_data:/data
-      - garage_test_meta:/meta
-    ports:
-      - "16900:3900"  # S3 API
-      - "16901:3901"  # RPC
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3900/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
 volumes:
   postgres_data:
   postgres_test_data:
-  garage_data:
-  garage_meta:
-  garage_test_data:
-  garage_test_meta:
