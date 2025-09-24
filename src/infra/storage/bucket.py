@@ -1,11 +1,48 @@
-from typing import Optional
+from dataclasses import dataclass
+from typing import Literal, Optional
 
 import boto3
 import zstandard as zstd
+from botocore.client import BaseClient
+from botocore.config import Config
 from botocore.exceptions import ClientError
 from moto import mock_aws
 
 from src.infra.compute import generate_timestamped_key
+
+DEFAULT_ENDPOINT_URL = "http://localhost:15900"
+DEFAULT_REGION_NAME = "garage"
+DEFAULT_ADDRESSING_STYLE: Literal["path", "virtual"] = "path"
+DEFAULT_SIGNATURE_VERSION = "s3v4"
+
+
+@dataclass(frozen=True)
+class StorageClientConfig:
+    """Garageを含むS3互換ストレージ接続設定"""
+
+    endpoint_url: Optional[str] = DEFAULT_ENDPOINT_URL
+    access_key: str = "datadoggo"
+    secret_key: str = "datadoggo_secret"
+    region_name: str = DEFAULT_REGION_NAME
+    addressing_style: Literal["path", "virtual"] = DEFAULT_ADDRESSING_STYLE
+
+
+def _build_s3_client(config: StorageClientConfig) -> BaseClient:
+    """garage対応設定でS3クライアントを生成する"""
+
+    client_config = Config(
+        signature_version=DEFAULT_SIGNATURE_VERSION,
+        s3={"addressing_style": config.addressing_style},
+    )
+
+    return boto3.client(
+        "s3",
+        endpoint_url=config.endpoint_url,
+        aws_access_key_id=config.access_key,
+        aws_secret_access_key=config.secret_key,
+        region_name=config.region_name,
+        config=client_config,
+    )
 
 
 def save_html_content(
@@ -13,10 +50,8 @@ def save_html_content(
     bucket_name: str,
     *,
     object_key: Optional[str] = None,
-    endpoint_url: str = "http://localhost:15900",
-    access_key: str = "datadoggo",
-    secret_key: str = "datadoggo_secret",
     prefix: str = "content",
+    client_config: Optional[StorageClientConfig] = None,
 ) -> str:
     """HTMLコンテンツをzstd圧縮してオブジェクトストレージに保存する"""
 
@@ -25,23 +60,23 @@ def save_html_content(
         compressor = zstd.ZstdCompressor(level=3)
         compressed_data = compressor.compress(content.encode("utf-8"))
 
-        # S3クライアント作成
-        s3_client = boto3.client(
-            "s3",
-            endpoint_url=endpoint_url
-            if endpoint_url != "http://localhost:15900"
-            else None,
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key,
-            region_name="us-east-1",
-        )
+        # 接続設定決定
+        config = client_config or StorageClientConfig()
+
+        # S3クライアント作成 (garage向けにパススタイルを強制)
+        s3_client = _build_s3_client(config)
 
         # バケット作成（存在しない場合）
         try:
             s3_client.head_bucket(Bucket=bucket_name)
         except ClientError as e:
             if e.response["Error"]["Code"] == "404":
-                s3_client.create_bucket(Bucket=bucket_name)
+                create_params = {"Bucket": bucket_name}
+                if config.region_name not in ("", "us-east-1"):
+                    create_params["CreateBucketConfiguration"] = {
+                        "LocationConstraint": config.region_name
+                    }
+                s3_client.create_bucket(**create_params)
 
         # オブジェクトキー決定
         resolved_key = object_key or generate_timestamped_key(
@@ -69,23 +104,14 @@ def load_html_content(
     bucket_name: str,
     object_key: str,
     *,
-    endpoint_url: str = "http://localhost:15900",
-    access_key: str = "datadoggo",
-    secret_key: str = "datadoggo_secret",
+    client_config: Optional[StorageClientConfig] = None,
 ) -> str:
     """オブジェクトストレージからzstd圧縮されたHTMLコンテンツを読み込む"""
 
     try:
         # S3クライアント作成
-        s3_client = boto3.client(
-            "s3",
-            endpoint_url=endpoint_url
-            if endpoint_url != "http://localhost:15900"
-            else None,
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key,
-            region_name="us-east-1",
-        )
+        config = client_config or StorageClientConfig()
+        s3_client = _build_s3_client(config)
 
         # オブジェクト取得
         response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
@@ -116,23 +142,14 @@ def search_html_objects(
     bucket_name: str,
     prefix: str = "",
     *,
-    endpoint_url: str = "http://localhost:15900",
-    access_key: str = "datadoggo",
-    secret_key: str = "datadoggo_secret",
+    client_config: Optional[StorageClientConfig] = None,
 ) -> list[str]:
     """指定プレフィックスでHTMLオブジェクト一覧を取得する"""
 
     try:
         # S3クライアント作成
-        s3_client = boto3.client(
-            "s3",
-            endpoint_url=endpoint_url
-            if endpoint_url != "http://localhost:15900"
-            else None,
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key,
-            region_name="us-east-1",
-        )
+        config = client_config or StorageClientConfig()
+        s3_client = _build_s3_client(config)
 
         # オブジェクト一覧取得
         response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
@@ -220,18 +237,36 @@ class Tests:
         </html>
         """
 
+        test_config = StorageClientConfig(
+            endpoint_url=None,
+            region_name="us-east-1",
+        )
+
         # HTML保存
-        object_key = save_html_content(test_html, bucket_name, prefix="test")
+        object_key = save_html_content(
+            test_html,
+            bucket_name,
+            prefix="test",
+            client_config=test_config,
+        )
         assert object_key != ""
         assert object_key.startswith("test_")
         assert object_key.endswith(".html.zst")
 
         # HTML読み込み
-        loaded_html = load_html_content(bucket_name, object_key)
+        loaded_html = load_html_content(
+            bucket_name,
+            object_key,
+            client_config=test_config,
+        )
         assert loaded_html == test_html
 
         # 検索テスト
-        keys = search_html_objects(bucket_name, "test")
+        keys = search_html_objects(
+            bucket_name,
+            "test",
+            client_config=test_config,
+        )
         assert object_key in keys
         assert len(keys) >= 1
 
@@ -244,10 +279,23 @@ class Tests:
                 - 存在しないバケット・オブジェクトに対して適切にエラー処理される。
                 - エラー時に空文字列・空リストが返される。
         """
+        test_config = StorageClientConfig(
+            endpoint_url=None,
+            region_name="us-east-1",
+        )
+
         # 存在しないオブジェクトの読み込み
-        result = load_html_content("nonexistent-bucket", "nonexistent-key")
+        result = load_html_content(
+            "nonexistent-bucket",
+            "nonexistent-key",
+            client_config=test_config,
+        )
         assert result == ""
 
         # 存在しないバケットでの検索
-        keys = search_html_objects("nonexistent-bucket", "test")
+        keys = search_html_objects(
+            "nonexistent-bucket",
+            "test",
+            client_config=test_config,
+        )
         assert keys == []
