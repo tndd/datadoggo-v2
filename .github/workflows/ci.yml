@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: datadoggo_test
+          POSTGRES_USER: datadoggo
+          POSTGRES_PASSWORD: datadoggo
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Install dependencies
+      run: uv sync --dev
+
+    - name: Set environment variables
+      run: |
+        echo "DATABASE_URL=postgresql://datadoggo:datadoggo@localhost:5432/datadoggo_test" >> $GITHUB_ENV
+
+    - name: Wait for PostgreSQL to be ready
+      run: |
+        until pg_isready -h localhost -p 5432 -U datadoggo; do
+          echo "Waiting for PostgreSQL..."
+          sleep 2
+        done
+
+    - name: Run ruff check
+      run: uv run ruff check src
+
+    - name: Run ruff format check
+      run: uv run ruff format --check src
+
+    - name: Run tests
+      run: uv run pytest --tb=short -v
