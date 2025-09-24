@@ -1,3 +1,4 @@
+# file.py
 from enum import Enum
 from inspect import currentframe
 from pathlib import Path
@@ -125,10 +126,12 @@ class Tests:
                 - それ以外はプロジェクトルート基準で読む。
         """
 
-        text = load_file("./fixture/sample.txt")
+        # absolute
+        text = load_file("mock/sample.txt")
         assert text == "sample text"
-        text = load_file("README.md")
-        assert text.startswith("# Datadoggo")
+        # relative
+        text = load_file("./file.py")
+        assert text.startswith("# file.py")  # WARN: その場しのぎのテスト
 
     def test_save_content_to_file(self, tmp_path: Path) -> None:
         """
@@ -167,6 +170,8 @@ class Tests:
 
         loaded = load_bytes(target_path)
         assert loaded == payload
+
+
 def _prepare_output_path(
     filepath: Optional[PathLike], format: SaveFormat, output_dir: str
 ) -> Path:
