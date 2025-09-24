@@ -2,21 +2,24 @@
 
 from __future__ import annotations
 
-import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional
 
 import zstandard as zstd
 
-from src.infra.compute import generate_timestamp
+from src.infra.compute import (
+    DEFAULT_MAX_STORAGE_KEY_LENGTH,
+    generate_timestamp,
+    sanitize_storage_key,
+)
 from src.infra.storage.file import load_bytes, save_bytes_to_file
 
 DEFAULT_STORAGE_ROOT = Path("storage/data")
 DEFAULT_BUCKET_NAME = "html"
 SHARD_PREFIX_LENGTH = 2
 HTML_OBJECT_EXTENSION = ".html.zst"
-MAX_SAFE_KEY_LENGTH = 128
+MAX_SAFE_KEY_LENGTH = DEFAULT_MAX_STORAGE_KEY_LENGTH
 
 
 @dataclass(frozen=True)
@@ -118,30 +121,10 @@ def _resolve_storage_key(
 
     candidate = object_key or source_url
     if candidate:
-        return _sanitize_key(candidate)
+        return sanitize_storage_key(candidate, max_length=MAX_SAFE_KEY_LENGTH)
 
     timestamp = generate_timestamp()
     return f"{prefix}_{timestamp}"
-
-
-def _sanitize_key(value: str) -> str:
-    """ファイルシステムで扱いやすいキーに正規化する"""
-
-    stripped = value.strip()
-    if _is_safe_key(stripped):
-        return stripped
-
-    return hashlib.sha256(stripped.encode("utf-8")).hexdigest()
-
-
-def _is_safe_key(value: str) -> bool:
-    """安全なファイル名か判定する"""
-
-    if not value or len(value) > MAX_SAFE_KEY_LENGTH:
-        return False
-
-    allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_")
-    return all(char in allowed for char in value)
 
 
 def _build_object_path(
