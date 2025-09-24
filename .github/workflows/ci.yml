@@ -61,4 +61,4 @@ jobs:
       run: uv run ruff format --check src
 
     - name: Run tests
-      run: uv run pytest --tb=short -v
+      run: uv run pytest src --tb=short -v
