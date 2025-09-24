@@ -60,7 +60,7 @@ def _parse_to_markdown(html: str) -> str:
 
 ### TEST ###
 class Tests:
-    from infra.storage.file.load import load_file
+    from infra.storage.file import load_file
 
     load_file: Callable[[str], str]
 
