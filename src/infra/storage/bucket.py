@@ -1,100 +1,55 @@
+"""ローカルファイルシステムにHTMLコンテンツを保存・読み込みするユーティリティ"""
+
+from __future__ import annotations
+
+import hashlib
 from dataclasses import dataclass
-from typing import Literal, Optional
+from pathlib import Path
+from typing import Iterable, Optional
 
-import boto3
 import zstandard as zstd
-from botocore.client import BaseClient
-from botocore.config import Config
-from botocore.exceptions import ClientError
-from moto import mock_aws
 
-from src.infra.compute import generate_timestamped_key
+from src.infra.compute import generate_timestamp
+from src.infra.storage.file import load_bytes, save_bytes_to_file
 
-DEFAULT_ENDPOINT_URL = "http://localhost:15900"
-DEFAULT_REGION_NAME = "garage"
-DEFAULT_ADDRESSING_STYLE: Literal["path", "virtual"] = "path"
-DEFAULT_SIGNATURE_VERSION = "s3v4"
+DEFAULT_STORAGE_ROOT = Path("storage/data")
+DEFAULT_BUCKET_NAME = "html"
+SHARD_PREFIX_LENGTH = 2
+HTML_OBJECT_EXTENSION = ".html.zst"
+MAX_SAFE_KEY_LENGTH = 128
 
 
 @dataclass(frozen=True)
-class StorageClientConfig:
-    """Garageを含むS3互換ストレージ接続設定"""
+class LocalStorageOptions:
+    """ローカルストレージ保存時のオプション設定"""
 
-    endpoint_url: Optional[str] = DEFAULT_ENDPOINT_URL
-    access_key: str = "datadoggo"
-    secret_key: str = "datadoggo_secret"
-    region_name: str = DEFAULT_REGION_NAME
-    addressing_style: Literal["path", "virtual"] = DEFAULT_ADDRESSING_STYLE
-
-
-def _build_s3_client(config: StorageClientConfig) -> BaseClient:
-    """garage対応設定でS3クライアントを生成する"""
-
-    client_config = Config(
-        signature_version=DEFAULT_SIGNATURE_VERSION,
-        s3={"addressing_style": config.addressing_style},
-    )
-
-    return boto3.client(
-        "s3",
-        endpoint_url=config.endpoint_url,
-        aws_access_key_id=config.access_key,
-        aws_secret_access_key=config.secret_key,
-        region_name=config.region_name,
-        config=client_config,
-    )
+    storage_root: Path | str = DEFAULT_STORAGE_ROOT
+    prefix: str = "content"
+    compression_level: int = 3
 
 
 def save_html_content(
     content: str,
-    bucket_name: str,
+    bucket_name: str = DEFAULT_BUCKET_NAME,
     *,
     object_key: Optional[str] = None,
-    prefix: str = "content",
-    client_config: Optional[StorageClientConfig] = None,
+    source_url: Optional[str] = None,
+    options: Optional[LocalStorageOptions] = None,
 ) -> str:
-    """HTMLコンテンツをzstd圧縮してオブジェクトストレージに保存する"""
+    """HTMLコンテンツをzstd圧縮してローカルファイルに保存する"""
 
     try:
-        # zstd圧縮
-        compressor = zstd.ZstdCompressor(level=3)
+        opts = options or LocalStorageOptions()
+
+        resolved_key = _resolve_storage_key(object_key, source_url, opts.prefix)
+        target_path = _build_object_path(bucket_name, resolved_key, opts.storage_root)
+
+        compressor = zstd.ZstdCompressor(level=opts.compression_level)
         compressed_data = compressor.compress(content.encode("utf-8"))
 
-        # 接続設定決定
-        config = client_config or StorageClientConfig()
-
-        # S3クライアント作成 (garage向けにパススタイルを強制)
-        s3_client = _build_s3_client(config)
-
-        # バケット作成（存在しない場合）
-        try:
-            s3_client.head_bucket(Bucket=bucket_name)
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "404":
-                create_params = {"Bucket": bucket_name}
-                if config.region_name not in ("", "us-east-1"):
-                    create_params["CreateBucketConfiguration"] = {
-                        "LocationConstraint": config.region_name
-                    }
-                s3_client.create_bucket(**create_params)
-
-        # オブジェクトキー決定
-        resolved_key = object_key or generate_timestamped_key(
-            prefix, extension="html.zst"
-        )
-
-        # オブジェクト保存
-        s3_client.put_object(
-            Bucket=bucket_name,
-            Key=resolved_key,
-            Body=compressed_data,
-            ContentType="application/zstd",
-            Metadata={"original_format": "html", "compression": "zstd"},
-        )
-
-        print(f"\nHTMLコンテンツを {bucket_name}/{resolved_key} に保存しました。")
+        save_bytes_to_file(compressed_data, target_path)
+        print(f"\nHTMLコンテンツを {target_path} に保存しました。")
         return resolved_key
-
     except Exception as error:
         print(f"HTML保存エラー: {error}")
         return ""
@@ -104,35 +59,25 @@ def load_html_content(
     bucket_name: str,
     object_key: str,
     *,
-    client_config: Optional[StorageClientConfig] = None,
+    options: Optional[LocalStorageOptions] = None,
 ) -> str:
-    """オブジェクトストレージからzstd圧縮されたHTMLコンテンツを読み込む"""
+    """ローカルファイルからzstd圧縮されたHTMLコンテンツを読み込む"""
 
     try:
-        # S3クライアント作成
-        config = client_config or StorageClientConfig()
-        s3_client = _build_s3_client(config)
+        opts = options or LocalStorageOptions()
+        target_path = _build_object_path(bucket_name, object_key, opts.storage_root)
 
-        # オブジェクト取得
-        response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
-        compressed_data = response["Body"].read()
+        if not target_path.exists():
+            print(f"HTMLファイルが見つかりません: {target_path}")
+            return ""
 
-        # zstd展開
+        compressed_data = load_bytes(target_path)
+        if not compressed_data:
+            return ""
+
         decompressor = zstd.ZstdDecompressor()
         decompressed_data = decompressor.decompress(compressed_data)
-        content = decompressed_data.decode("utf-8")
-
-        return content
-
-    except ClientError as e:
-        error_code = e.response["Error"]["Code"]
-        if error_code == "NoSuchKey":
-            print(f"HTMLオブジェクトが見つかりません: {bucket_name}/{object_key}")
-        elif error_code == "NoSuchBucket":
-            print(f"バケットが見つかりません: {bucket_name}")
-        else:
-            print(f"S3エラー: {e}")
-        return ""
+        return decompressed_data.decode("utf-8")
     except Exception as error:
         print(f"HTML読み込みエラー: {error}")
         return ""
@@ -142,160 +87,175 @@ def search_html_objects(
     bucket_name: str,
     prefix: str = "",
     *,
-    client_config: Optional[StorageClientConfig] = None,
+    options: Optional[LocalStorageOptions] = None,
 ) -> list[str]:
-    """指定プレフィックスでHTMLオブジェクト一覧を取得する"""
+    """指定バケット内のHTMLオブジェクト一覧を取得する"""
 
     try:
-        # S3クライアント作成
-        config = client_config or StorageClientConfig()
-        s3_client = _build_s3_client(config)
-
-        # オブジェクト一覧取得
-        response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
-
-        if "Contents" not in response:
+        opts = options or LocalStorageOptions()
+        bucket_dir = _resolve_bucket_dir(bucket_name, opts.storage_root)
+        if not bucket_dir.exists():
             return []
 
-        return [obj["Key"] for obj in response["Contents"]]
-
-    except ClientError as e:
-        error_code = e.response["Error"]["Code"]
-        if error_code == "NoSuchBucket":
-            print(f"バケットが見つかりません: {bucket_name}")
-        else:
-            print(f"S3エラー: {e}")
-        return []
+        keys: list[str] = []
+        for file_path in _iter_object_files(bucket_dir):
+            key = _extract_key_from_path(file_path)
+            if prefix and not key.startswith(prefix):
+                continue
+            keys.append(key)
+        return keys
     except Exception as error:
         print(f"HTMLオブジェクト検索エラー: {error}")
         return []
 
 
+def _resolve_storage_key(
+    object_key: Optional[str],
+    source_url: Optional[str],
+    prefix: str,
+) -> str:
+    """保存用オブジェクトキーを決定する"""
+
+    candidate = object_key or source_url
+    if candidate:
+        return _sanitize_key(candidate)
+
+    timestamp = generate_timestamp()
+    return f"{prefix}_{timestamp}"
+
+
+def _sanitize_key(value: str) -> str:
+    """ファイルシステムで扱いやすいキーに正規化する"""
+
+    stripped = value.strip()
+    if _is_safe_key(stripped):
+        return stripped
+
+    return hashlib.sha256(stripped.encode("utf-8")).hexdigest()
+
+
+def _is_safe_key(value: str) -> bool:
+    """安全なファイル名か判定する"""
+
+    if not value or len(value) > MAX_SAFE_KEY_LENGTH:
+        return False
+
+    allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_")
+    return all(char in allowed for char in value)
+
+
+def _build_object_path(
+    bucket_name: str,
+    object_key: str,
+    storage_root: Path | str,
+) -> Path:
+    """オブジェクトキーから保存先パスを構築する"""
+
+    root = Path(storage_root)
+    shard = object_key[:SHARD_PREFIX_LENGTH] or "00"
+    file_name = (
+        f"{object_key}{HTML_OBJECT_EXTENSION}"
+        if not object_key.endswith(HTML_OBJECT_EXTENSION)
+        else object_key
+    )
+
+    return root / bucket_name / shard / file_name
+
+
+def _resolve_bucket_dir(bucket_name: str, storage_root: Path | str) -> Path:
+    """バケットディレクトリを解決する"""
+
+    return Path(storage_root) / bucket_name
+
+
+def _iter_object_files(bucket_dir: Path) -> Iterable[Path]:
+    """バケット配下のオブジェクトファイルを列挙する"""
+
+    return bucket_dir.rglob(f"*{HTML_OBJECT_EXTENSION}")
+
+
+def _extract_key_from_path(file_path: Path) -> str:
+    """ファイル名からオブジェクトキーを取り出す"""
+
+    name = file_path.name
+    if name.endswith(HTML_OBJECT_EXTENSION):
+        return name[: -len(HTML_OBJECT_EXTENSION)]
+    return name
+
+
 class Tests:
-    @mock_aws
-    def test_generate_timestamped_key(self) -> None:
+    def test_save_and_load_html_content(self, tmp_path: Path) -> None:
         """
         docs:
-            目的: タイムスタンプ付きキー生成の正常性を確認する。
+            目的: HTML保存と読み込みの一連動作を確認する。
             検証観点:
-                - プレフィックスが正しく反映される。
-                - html.zst拡張子が付与される。
+                - コンテンツがzstd圧縮で保存される。
+                - 保存したキーを用いて元HTMLが復元できる。
         """
-        key = generate_timestamped_key("test", extension="html.zst")
-        assert key.startswith("test_")
-        assert key.endswith(".html.zst")
-        # タイムスタンプ部分の長さチェック (YYYYMMDD_HHMMSS = 15文字)
-        timestamp_part = "_".join(key.split("_")[1:]).split(".")[0]
-        TIMESTAMP_LENGTH = 15
-        assert len(timestamp_part) == TIMESTAMP_LENGTH
 
-    @mock_aws
-    def test_zstd_compression_decompression(self) -> None:
+        html = "<html><body><h1>テスト</h1></body></html>"
+        storage_root = tmp_path / "storage" / "data"
+        options = LocalStorageOptions(storage_root=storage_root)
+
+        key = save_html_content(
+            html,
+            bucket_name="html",
+            source_url="https://example.com/test",
+            options=options,
+        )
+        assert key != ""
+        saved_path = _build_object_path("html", key, storage_root)
+        assert saved_path.exists()
+
+        loaded = load_html_content("html", key, options=options)
+        assert loaded == html
+
+    def test_search_html_objects(self, tmp_path: Path) -> None:
         """
         docs:
-            目的: zstd圧縮・展開ロジックの正常性を確認する。
+            目的: 保存済みオブジェクトの一覧取得を確認する。
             検証観点:
-                - HTML文字列の圧縮・展開が正常に動作する。
-                - 日本語を含むHTMLでも正常処理される。
+                - バケット内ファイルがキーとして検出される。
+                - プレフィックス指定で絞り込みが行われる。
         """
-        test_html = (
-            "<html><body><h1>テストHTML</h1><p>日本語コンテンツ</p></body></html>"
+
+        html = "<html><body>Content</body></html>"
+        storage_root = tmp_path / "storage"
+        options = LocalStorageOptions(storage_root=storage_root)
+
+        key1 = save_html_content(
+            html,
+            bucket_name="html",
+            source_url="https://example.com/a",
+            options=options,
+        )
+        key2 = save_html_content(
+            html,
+            bucket_name="html",
+            source_url="https://example.com/b",
+            options=options,
         )
 
-        # 圧縮
-        compressor = zstd.ZstdCompressor(level=3)
-        compressed = compressor.compress(test_html.encode("utf-8"))
+        keys = search_html_objects("html", options=options)
+        assert set(keys) == {key1, key2}
 
-        # 展開
-        decompressor = zstd.ZstdDecompressor()
-        decompressed = decompressor.decompress(compressed).decode("utf-8")
+        filtered = search_html_objects("html", prefix=key1, options=options)
+        assert filtered == [key1]
 
-        assert decompressed == test_html
-
-    @mock_aws
-    def test_html_storage_flow(self) -> None:
+    def test_error_handling(self, tmp_path: Path) -> None:
         """
         docs:
-            目的: HTML保存→読み込み一連フローの統合テスト。
+            目的: 未保存データに対するエラーハンドリングを確認する。
             検証観点:
-                - HTMLコンテンツの保存と読み込みが正常に動作する。
-                - 圧縮・展開を通じてデータの整合性が保たれる。
-                - バケット自動作成が正常に動作する。
-        """
-        bucket_name = "test-html-bucket"
-        test_html = """
-        <html>
-            <head><title>テストページ</title></head>
-            <body>
-                <h1>スクレイピングテスト</h1>
-                <p>日本語のHTMLコンテンツです。</p>
-                <ul>
-                    <li>項目1</li>
-                    <li>項目2</li>
-                </ul>
-            </body>
-        </html>
+                - 存在しないキー読み込み時に空文字列を返す。
+                - 存在しないバケット検索時に空リストを返す。
         """
 
-        test_config = StorageClientConfig(
-            endpoint_url=None,
-            region_name="us-east-1",
-        )
+        storage_root = tmp_path / "storage"
+        options = LocalStorageOptions(storage_root=storage_root)
 
-        # HTML保存
-        object_key = save_html_content(
-            test_html,
-            bucket_name,
-            prefix="test",
-            client_config=test_config,
-        )
-        assert object_key != ""
-        assert object_key.startswith("test_")
-        assert object_key.endswith(".html.zst")
-
-        # HTML読み込み
-        loaded_html = load_html_content(
-            bucket_name,
-            object_key,
-            client_config=test_config,
-        )
-        assert loaded_html == test_html
-
-        # 検索テスト
-        keys = search_html_objects(
-            bucket_name,
-            "test",
-            client_config=test_config,
-        )
-        assert object_key in keys
-        assert len(keys) >= 1
-
-    @mock_aws
-    def test_error_handling(self) -> None:
-        """
-        docs:
-            目的: エラーハンドリングの正常性を確認する。
-            検証観点:
-                - 存在しないバケット・オブジェクトに対して適切にエラー処理される。
-                - エラー時に空文字列・空リストが返される。
-        """
-        test_config = StorageClientConfig(
-            endpoint_url=None,
-            region_name="us-east-1",
-        )
-
-        # 存在しないオブジェクトの読み込み
-        result = load_html_content(
-            "nonexistent-bucket",
-            "nonexistent-key",
-            client_config=test_config,
-        )
+        result = load_html_content("html", "missing", options=options)
         assert result == ""
 
-        # 存在しないバケットでの検索
-        keys = search_html_objects(
-            "nonexistent-bucket",
-            "test",
-            client_config=test_config,
-        )
+        keys = search_html_objects("html", options=options)
         assert keys == []

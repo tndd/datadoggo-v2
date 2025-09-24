@@ -2,9 +2,11 @@ from enum import Enum
 from inspect import currentframe
 from pathlib import Path
 from types import FrameType
-from typing import Optional
+from typing import Optional, Union
 
 from src.infra.compute import generate_timestamped_filename
+
+PathLike = Union[str, Path]
 
 
 class SaveFormat(Enum):
@@ -14,10 +16,10 @@ class SaveFormat(Enum):
     HTML = "html"
 
 
-def load_file(path: str) -> str:
+def load_file(path: PathLike) -> str:
     """ファイルを読み込む"""
     try:
-        target_path = _resolve_path(path)
+        target_path = _resolve_any_path(path)
         return target_path.read_text(encoding="utf-8")
     except Exception as error:
         print(f"ファイル読み込みエラー: {error}")
@@ -27,21 +29,13 @@ def load_file(path: str) -> str:
 def save_content_to_file(
     content: str,
     format: SaveFormat = SaveFormat.HTML,
-    filepath: Optional[str] = None,
+    filepath: Optional[PathLike] = None,
     output_dir: str = "mock",
 ) -> str:
     """コンテンツをファイルに保存する"""
 
     try:
-        resolved_path = (
-            Path(filepath)
-            if filepath
-            else Path(
-                generate_timestamped_filename(
-                    prefix="out", extension=format.value, output_dir=output_dir
-                )
-            )
-        )
+        resolved_path = _prepare_output_path(filepath, format, output_dir)
         resolved_path.parent.mkdir(parents=True, exist_ok=True)
         resolved_path.write_text(content, encoding="utf-8")
         print(f"\nコンテンツを {resolved_path} に保存しました。")
@@ -51,14 +45,51 @@ def save_content_to_file(
         return ""
 
 
-def _resolve_path(path: str) -> Path:
+def save_bytes_to_file(content: bytes, filepath: PathLike) -> str:
+    """バイナリコンテンツをファイルに保存する"""
+
+    try:
+        target_path = _to_path(filepath)
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_bytes(content)
+        print(f"\nバイナリを {target_path} に保存しました。")
+        return str(target_path)
+    except Exception as error:
+        print(f"バイナリ保存エラー: {error}")
+        return ""
+
+
+def load_bytes(path: PathLike) -> bytes:
+    """バイナリファイルを読み込む"""
+
+    try:
+        target_path = _resolve_any_path(path)
+        return target_path.read_bytes()
+    except Exception as error:
+        print(f"バイナリ読み込みエラー: {error}")
+        return b""
+
+
+def _resolve_any_path(path: PathLike) -> Path:
+    """str/Pathの双方を受け取って実パスに解決する"""
+
+    if isinstance(path, Path):
+        return path
+    return _resolve_path(path, _stack_skip=3)
+
+
+def _resolve_path(path: str, *, _stack_skip: int = 2) -> Path:
     """読み込み対象のパスを解決する"""
 
     if path.startswith("."):
         frame = currentframe()
         caller: Optional[FrameType] = None
         try:
-            caller = frame.f_back.f_back if frame and frame.f_back else None
+            caller = frame
+            steps = _stack_skip
+            while steps > 0 and caller:
+                caller = caller.f_back
+                steps -= 1
             caller_file = (
                 Path(caller.f_code.co_filename).resolve()
                 if caller
@@ -117,3 +148,40 @@ class Tests:
         saved_path = Path(path_str)
         assert saved_path.exists()
         assert saved_path.read_text(encoding="utf-8") == "テストコンテンツ"
+
+    def test_save_and_load_bytes(self, tmp_path: Path) -> None:
+        """
+        docs:
+            目的: save_bytes_to_file / load_bytes のバイナリ入出力を確認する。
+            検証観点:
+                - 指定パスにバイナリが保存・読み込みできる。
+                - 保存時にディレクトリが自動作成される。
+        """
+
+        target_path = tmp_path / "bin" / "data.bin"
+        payload = b"binary-content"
+
+        written = save_bytes_to_file(payload, target_path)
+        assert written == str(target_path)
+        assert target_path.exists()
+
+        loaded = load_bytes(target_path)
+        assert loaded == payload
+def _prepare_output_path(
+    filepath: Optional[PathLike], format: SaveFormat, output_dir: str
+) -> Path:
+    """保存先パスを決定する"""
+
+    if filepath is not None:
+        return _to_path(filepath)
+
+    generated = generate_timestamped_filename(
+        prefix="out", extension=format.value, output_dir=output_dir
+    )
+    return Path(generated)
+
+
+def _to_path(path: PathLike) -> Path:
+    """PathLikeからPathへの変換"""
+
+    return path if isinstance(path, Path) else Path(path)
