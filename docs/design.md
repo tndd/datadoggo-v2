@@ -18,14 +18,14 @@ URL取得状況の管理も行う。
 
 | name           | type       | description                    |
 | -------------- | ---------- | ------------------------------ |
-| id             | text(PK)   | URLのhash                      |
+| id             | text(PK)   | sha256 hash                    |
 | created_at     | timestampz | 作成日時。デフォルトは現在時刻 |
 | updated_at     | timestampz | 更新日時。デフォルトは現在時刻 |
 | content_path   | text       | 記事が保存されているパス       |
 | content_digest | text       | 記事の内容のハッシュ           |
 
 **join元:**
-- ArticleLinks
+- Feed.id = Bucket.id
 
 # ドメインモデル
 
