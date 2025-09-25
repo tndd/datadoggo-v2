@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Union
 
 from src.infra.compute import (
     DEFAULT_MAX_STORAGE_KEY_LENGTH,
+    compress_bytes_to_zstd,
     compress_text_to_zstd,
+    decompress_zstd_to_bytes,
     decompress_zstd_to_text,
     generate_timestamp,
     sanitize_storage_key,
@@ -16,38 +17,29 @@ from src.infra.compute import (
 from src.infra.storage.file import load_bytes, save_bytes_to_file
 
 DEFAULT_STORAGE_ROOT = Path("storage/data")
+DEFAULT_OBJECT_EXTENSION = ".zst"
 SHARD_PREFIX_LENGTH = 2
 MAX_SAFE_KEY_LENGTH = DEFAULT_MAX_STORAGE_KEY_LENGTH
 
 
-@dataclass(frozen=True)
-class LocalStorageOptions:
-    """ローカルストレージ保存時のオプション設定"""
-
-    storage_root: Path | str = DEFAULT_STORAGE_ROOT
-    prefix: str = "content"
-    object_extension: str = ".zst"
-
-
-def save_object_bytes(
-    payload: bytes,
+def save_object(
+    payload: Union[bytes, str],
     bucket_name: str,
+    object_key: str,
     *,
-    object_key: Optional[str] = None,
-    source_identifier: Optional[str] = None,
-    options: Optional[LocalStorageOptions] = None,
+    storage_root: Path | str = DEFAULT_STORAGE_ROOT,
+    encoding: str = "utf-8",
 ) -> str:
-    """バイト列をローカルファイルに保存する"""
+    """オブジェクトを圧縮して保存する"""
 
     try:
-        opts = options or LocalStorageOptions()
-
-        resolved_key = _resolve_storage_key(object_key, source_identifier, opts.prefix)
+        resolved_key = _resolve_storage_key(object_key)
         target_path = _build_object_path(
-            bucket_name, resolved_key, opts.storage_root, opts.object_extension
+            bucket_name, resolved_key, storage_root, DEFAULT_OBJECT_EXTENSION
         )
 
-        save_bytes_to_file(payload, target_path)
+        payload_bytes = _to_compressed_bytes(payload, encoding=encoding)
+        save_bytes_to_file(payload_bytes, target_path)
         print(f"\nオブジェクトを {target_path} に保存しました。")
         return resolved_key
     except Exception as error:
@@ -55,82 +47,55 @@ def save_object_bytes(
         return ""
 
 
-def save_text_content(
-    content: str,
-    bucket_name: str,
-    *,
-    object_key: Optional[str] = None,
-    source_identifier: Optional[str] = None,
-    options: Optional[LocalStorageOptions] = None,
-) -> str:
-    """テキストを圧縮して保存するためのヘルパー"""
-
-    compressed = compress_text_to_zstd(content)
-    return save_object_bytes(
-        compressed,
-        bucket_name,
-        object_key=object_key,
-        source_identifier=source_identifier,
-        options=options,
-    )
-
-
-def load_object_bytes(
+def load_object(
     bucket_name: str,
     object_key: str,
     *,
-    options: Optional[LocalStorageOptions] = None,
-) -> bytes:
-    """ローカルファイルからバイナリを読み込む"""
+    storage_root: Path | str = DEFAULT_STORAGE_ROOT,
+    as_text: bool = False,
+    encoding: str = "utf-8",
+) -> Union[bytes, str]:
+    """保存済みオブジェクトを読み込む"""
 
     try:
-        opts = options or LocalStorageOptions()
         target_path = _build_object_path(
-            bucket_name, object_key, opts.storage_root, opts.object_extension
+            bucket_name, object_key, storage_root, DEFAULT_OBJECT_EXTENSION
         )
 
         if not target_path.exists():
             print(f"オブジェクトが見つかりません: {target_path}")
-            return b""
+            return "" if as_text else b""
 
         compressed_data = load_bytes(target_path)
-        return compressed_data
+        if not compressed_data:
+            return "" if as_text else b""
+
+        if as_text:
+            return decompress_zstd_to_text(compressed_data, encoding=encoding)
+        return decompress_zstd_to_bytes(compressed_data)
     except Exception as error:
         print(f"オブジェクト読み込みエラー: {error}")
-        return b""
-
-
-def load_text_content(
-    bucket_name: str,
-    object_key: str,
-    *,
-    options: Optional[LocalStorageOptions] = None,
-) -> str:
-    """圧縮済みテキストを読み込み復元するヘルパー"""
-
-    data = load_object_bytes(bucket_name, object_key, options=options)
-    if not data:
-        return ""
-    return decompress_zstd_to_text(data)
+        return "" if as_text else b""
 
 
 def search_object_keys(
     bucket_name: str,
     prefix: str = "",
     *,
-    options: Optional[LocalStorageOptions] = None,
+    storage_root: Path | str = DEFAULT_STORAGE_ROOT,
 ) -> list[str]:
     """指定バケット内のオブジェクトキー一覧を取得する"""
 
     try:
-        opts = options or LocalStorageOptions()
-        bucket_dir = _resolve_bucket_dir(bucket_name, opts.storage_root)
+        bucket_dir = Path(storage_root) / bucket_name  # バケットのルートディレクトリ
         if not bucket_dir.exists():
             return []
 
+        extension = DEFAULT_OBJECT_EXTENSION
         keys: list[str] = []
-        for file_path in _iter_object_files(bucket_dir, opts.object_extension):
-            key = _extract_key_from_path(file_path, opts.object_extension)
+        for file_path in bucket_dir.rglob(f"*{extension}"):
+            name = file_path.name
+            key = name[: -len(extension)] if name.endswith(extension) else name
             if prefix and not key.startswith(prefix):
                 continue
             keys.append(key)
@@ -141,18 +106,16 @@ def search_object_keys(
 
 
 def _resolve_storage_key(
-    object_key: Optional[str],
-    source_identifier: Optional[str],
-    prefix: str,
+    object_key: str,
 ) -> str:
     """保存用オブジェクトキーを決定する"""
 
-    candidate = object_key or source_identifier
-    if candidate:
-        return sanitize_storage_key(candidate, max_length=MAX_SAFE_KEY_LENGTH)
+    sanitized = sanitize_storage_key(object_key, max_length=MAX_SAFE_KEY_LENGTH)
+    if sanitized:
+        return sanitized
 
     timestamp = generate_timestamp()
-    return f"{prefix}_{timestamp}"
+    return f"auto_{timestamp}"
 
 
 def _build_object_path(
@@ -165,7 +128,9 @@ def _build_object_path(
 
     root = Path(storage_root)
     shard = object_key[:SHARD_PREFIX_LENGTH] or "00"
-    normalized_extension = _normalize_extension(object_extension)
+    normalized_extension = (
+        object_extension if object_extension.startswith(".") else f".{object_extension}"
+    )
     file_name = (
         f"{object_key}{normalized_extension}"
         if not object_key.endswith(normalized_extension)
@@ -175,60 +140,67 @@ def _build_object_path(
     return root / bucket_name / shard / file_name
 
 
-def _resolve_bucket_dir(bucket_name: str, storage_root: Path | str) -> Path:
-    """バケットディレクトリを解決する"""
+def _to_compressed_bytes(
+    payload: Union[bytes, str], *, encoding: str = "utf-8"
+) -> bytes:
+    """入力データをZstandard圧縮済みバイト列に変換する"""
 
-    return Path(storage_root) / bucket_name
-
-
-def _iter_object_files(bucket_dir: Path, object_extension: str) -> Iterable[Path]:
-    """バケット配下のオブジェクトファイルを列挙する"""
-
-    normalized_extension = _normalize_extension(object_extension)
-    return bucket_dir.rglob(f"*{normalized_extension}")
-
-
-def _extract_key_from_path(file_path: Path, object_extension: str) -> str:
-    """ファイル名からオブジェクトキーを取り出す"""
-
-    name = file_path.name
-    normalized_extension = _normalize_extension(object_extension)
-    if name.endswith(normalized_extension):
-        return name[: -len(normalized_extension)]
-    return name
-
-
-def _normalize_extension(object_extension: str) -> str:
-    """先頭にドットを付与した拡張子表記を返す"""
-
-    if object_extension.startswith("."):
-        return object_extension
-    return f".{object_extension}"
+    if isinstance(payload, bytes):
+        return compress_bytes_to_zstd(payload)
+    return compress_text_to_zstd(payload, encoding=encoding)
 
 
 class Tests:
-    def test_save_and_load_text_content(self, tmp_path: Path) -> None:
+    def test_save_and_load_text(self, tmp_path: Path) -> None:
         """
         docs:
             目的: テキストを圧縮して保存し復元できることを確認する。
             検証観点:
-                - 圧縮ユーティリティを利用して保存できる。
-                - 保存したキーを用いて元テキストが復元できる。
+                - save_object がテキスト入力を受け付ける。
+                - load_object(as_text=True) で元テキストが復元できる。
         """
 
         text = "テキストデータの保存テスト"
         storage_root = tmp_path / "storage" / "data"
-        options = LocalStorageOptions(storage_root=storage_root)
 
-        key = save_text_content(text, bucket_name="objects", options=options)
+        key = save_object(
+            text,
+            bucket_name="objects",
+            object_key="test_key",
+            storage_root=storage_root,
+        )
         assert key != ""
         saved_path = _build_object_path(
-            "objects", key, storage_root, options.object_extension
+            "objects", key, storage_root, DEFAULT_OBJECT_EXTENSION
         )
         assert saved_path.exists()
 
-        loaded = load_text_content("objects", key, options=options)
+        loaded = load_object("objects", key, storage_root=storage_root, as_text=True)
         assert loaded == text
+
+    def test_save_and_load_bytes(self, tmp_path: Path) -> None:
+        """
+        docs:
+            目的: バイト列を圧縮して保存し復元できることを確認する。
+            検証観点:
+                - save_object がバイト列入力を受け付ける。
+                - load_object(as_text=False) で元バイト列が復元できる。
+        """
+
+        payload = b"binary-data" * 4
+        storage_root = tmp_path / "storage"
+
+        key = save_object(
+            payload,
+            bucket_name="bin",
+            object_key="bytes",
+            storage_root=storage_root,
+        )
+        assert key == "bytes"
+
+        loaded = load_object("bin", key, storage_root=storage_root)
+        assert isinstance(loaded, bytes)
+        assert loaded == payload
 
     def test_search_object_keys(self, tmp_path: Path) -> None:
         """
@@ -240,26 +212,24 @@ class Tests:
         """
 
         storage_root = tmp_path / "storage"
-        options = LocalStorageOptions(storage_root=storage_root)
 
-        compressed = compress_text_to_zstd("obj1")
-        key1 = save_object_bytes(
-            compressed,
+        key1 = save_object(
+            "obj1",
             bucket_name="objects",
-            source_identifier="id-a",
-            options=options,
+            object_key="id-a",
+            storage_root=storage_root,
         )
-        key2 = save_object_bytes(
-            compress_text_to_zstd("obj2"),
+        key2 = save_object(
+            "obj2",
             bucket_name="objects",
-            source_identifier="id-b",
-            options=options,
+            object_key="id-b",
+            storage_root=storage_root,
         )
 
-        keys = search_object_keys("objects", options=options)
+        keys = search_object_keys("objects", storage_root=storage_root)
         assert set(keys) == {key1, key2}
 
-        filtered = search_object_keys("objects", prefix=key1, options=options)
+        filtered = search_object_keys("objects", prefix=key1, storage_root=storage_root)
         assert filtered == [key1]
 
     def test_error_handling(self, tmp_path: Path) -> None:
@@ -272,10 +242,11 @@ class Tests:
         """
 
         storage_root = tmp_path / "storage"
-        options = LocalStorageOptions(storage_root=storage_root)
 
-        result = load_text_content("objects", "missing", options=options)
+        result = load_object(
+            "objects", "missing", storage_root=storage_root, as_text=True
+        )
         assert result == ""
 
-        keys = search_object_keys("objects", options=options)
+        keys = search_object_keys("objects", storage_root=storage_root)
         assert keys == []
