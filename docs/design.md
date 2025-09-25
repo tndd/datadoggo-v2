@@ -1,7 +1,7 @@
 # テーブル定義
 Option指定なき場合、NOT NULL制約とする。
 
-## FeedEntity
+## Feed
 RSSフィードの要素を保存するテーブル。
 URL取得状況の管理も行う。
 
