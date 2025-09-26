@@ -16,7 +16,7 @@ from src.infra.compute import (
 )
 from src.infra.storage.file import load_bytes, save_bytes_to_file
 
-DEFAULT_STORAGE_ROOT = Path("storage/data")
+DEFAULT_STORAGE_ROOT = Path("data/bucket")
 DEFAULT_OBJECT_EXTENSION = ".zst"
 SHARD_PREFIX_LENGTH = 2
 MAX_SAFE_KEY_LENGTH = DEFAULT_MAX_STORAGE_KEY_LENGTH
@@ -161,7 +161,7 @@ class Tests:
         """
 
         text = "テキストデータの保存テスト"
-        storage_root = tmp_path / "storage" / "data"
+        storage_root = tmp_path / "data" / "bucket"
 
         key = save_object(
             text,
@@ -188,7 +188,7 @@ class Tests:
         """
 
         payload = b"binary-data" * 4
-        storage_root = tmp_path / "storage"
+        storage_root = tmp_path / "data" / "bucket"
 
         key = save_object(
             payload,
@@ -211,7 +211,7 @@ class Tests:
                 - プレフィックス指定で絞り込みが行われる。
         """
 
-        storage_root = tmp_path / "storage"
+        storage_root = tmp_path / "data" / "bucket"
 
         key1 = save_object(
             "obj1",
@@ -241,7 +241,7 @@ class Tests:
                 - 存在しないバケット検索時に空リストを返す。
         """
 
-        storage_root = tmp_path / "storage"
+        storage_root = tmp_path / "data" / "bucket"
 
         result = load_object(
             "objects", "missing", storage_root=storage_root, as_text=True
