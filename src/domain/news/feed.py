@@ -30,6 +30,11 @@ class FeedQuery(BaseModel):
 
     limit: int = Field(default=100, ge=1, le=500)
     offset: int = Field(default=0, ge=0)
+    title: str | None = None
+    url: str | None = None
+    status_code: int | None = None
+    pub_date_from: datetime | None = None
+    pub_date_to: datetime | None = None
 
 
 HTTP_URL_ADAPTER = TypeAdapter(HttpUrl)
@@ -93,9 +98,26 @@ def search_feeds(query: FeedQuery) -> list[Feed]:
 
     _ensure_initialized()
     with session_scope() as session:
+        statement = select(_FeedRecord)
+
+        if query.title:
+            title_expr = cast(Any, _FeedRecord.title)
+            statement = statement.where(title_expr.contains(query.title))
+
+        if query.url:
+            statement = statement.where(_FeedRecord.url == query.url)
+
+        if query.status_code is not None:
+            statement = statement.where(_FeedRecord.status_code == query.status_code)
+
+        if query.pub_date_from is not None:
+            statement = statement.where(_FeedRecord.pub_date >= query.pub_date_from)
+
+        if query.pub_date_to is not None:
+            statement = statement.where(_FeedRecord.pub_date <= query.pub_date_to)
+
         statement = (
-            select(_FeedRecord)
-            .order_by(desc(cast(Any, _FeedRecord.pub_date)))
+            statement.order_by(desc(cast(Any, _FeedRecord.pub_date)))
             .offset(query.offset)
             .limit(query.limit)
         )
@@ -197,6 +219,73 @@ class Tests:
         expected_count = 2
         assert len(result) == expected_count
         assert result[0].pub_date > result[1].pub_date
+
+        os.environ.pop("FEED_DATABASE_URL", None)
+
+    def test_search_feeds_filters_conditions(self, tmp_path) -> None:
+        """
+        docs:
+            目的:
+                search_feeds が複数条件(title/url/status_code/pub_date範囲)で
+                絞り込みできることを確認する。
+            検証観点:
+                - title の部分一致で複数件がヒットする。
+                - status_code 一致で特定のレコードだけ返る。
+                - pub_date の範囲指定で対象が限定される。
+                - url の完全一致で1件に絞り込める。
+        """
+
+        db_path = tmp_path / "datadoggo.db"
+        os.environ["FEED_DATABASE_URL"] = f"sqlite:///{db_path}"
+
+        feed_success = create_feed(
+            url="https://example.com/success",
+            title="Daily Success Report",
+            status_code=200,
+            pub_date=datetime(2024, 1, 10, 8, 0, 0),
+        )
+        feed_failure = create_feed(
+            url="https://example.com/failure",
+            title="Weekly Failure Recap",
+            status_code=500,
+            pub_date=datetime(2024, 1, 5, 8, 0, 0),
+        )
+        feed_other = create_feed(
+            url="https://example.org/other",
+            title="Daily Other News",
+            status_code=200,
+            pub_date=datetime(2024, 1, 12, 12, 0, 0),
+        )
+
+        for feed in (feed_success, feed_failure, feed_other):
+            store_feed(feed)
+
+        # title filter (部分一致)
+        title_filtered = search_feeds(FeedQuery(title="Daily", limit=10))
+        assert {item.id for item in title_filtered} == {
+            feed_success.id,
+            feed_other.id,
+        }
+
+        # status_code filter
+        status_filtered = search_feeds(FeedQuery(status_code=500, limit=10))
+        assert [item.id for item in status_filtered] == [feed_failure.id]
+
+        # pub_date range filter
+        range_filtered = search_feeds(
+            FeedQuery(
+                pub_date_from=datetime(2024, 1, 6, 0, 0, 0),
+                pub_date_to=datetime(2024, 1, 11, 23, 59, 59),
+                limit=10,
+            )
+        )
+        assert [item.id for item in range_filtered] == [feed_success.id]
+
+        # url filter (完全一致)
+        url_filtered = search_feeds(
+            FeedQuery(url="https://example.org/other", limit=10)
+        )
+        assert [item.id for item in url_filtered] == [feed_other.id]
 
         os.environ.pop("FEED_DATABASE_URL", None)
 

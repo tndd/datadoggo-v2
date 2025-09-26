@@ -39,7 +39,7 @@
    - URL文字列をハッシュ化する関数(例:`hash_text_sha256`)を定義し、既存利用箇所との整合性を確認。
 4. **ドメイン層 (`src/domain/news/feed.py`)**
    - `Feed`モデル、入力DTO(`FeedQuery`等)を定義。
-   - 公開関数(`store_feed`, `find_feed_by_id`, `search_feeds`)でビジネスロジックを提供し、内部で`_save_feed`などのRDS操作関数を呼び出す。
+  - 公開関数(`store_feed`, `find_feed_by_id`, `search_feeds`)でビジネスロジックを提供し、`search_feeds`ではtitle/url/status_code/pub_date範囲のフィルタリングを行う。
    - セッション管理は`infra.storage.rds`のコンテキスト(`session_scope`)を利用し、SQLite接続を取得する。
 5. **初期データベース生成**
    - エントリポイント(例:`main.py`)に`initialize_database`呼び出しを追加し、初回起動でテーブルが作成されるようにする。
@@ -55,7 +55,7 @@
 ```
 src/domain/news/feed.py
   ├─ モデル: Feed
-  ├─ 型: FeedQuery, FeedSearchResult
+  ├─ 型: FeedQuery(limit/offset/title/url/status_code/pub_date_from/pub_date_to), FeedSearchResult
   ├─ ユーティリティ関数: build_feed_from_raw, create_feed
   ├─ 公開関数: store_feed, find_feed_by_id, search_feeds
   └─ 内部関数: _save_feed
