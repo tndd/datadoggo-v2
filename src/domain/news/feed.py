@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-from typing import Optional
+from typing import Any, ClassVar, Optional, cast
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, TypeAdapter
+from sqlalchemy import desc
 from sqlmodel import Field as SQLField
 from sqlmodel import SQLModel, select
 
@@ -31,10 +32,13 @@ class FeedQuery(BaseModel):
     offset: int = Field(default=0, ge=0)
 
 
+HTTP_URL_ADAPTER = TypeAdapter(HttpUrl)
+
+
 class _FeedRecord(SQLModel, table=True):
     """SQLModelによるFeedテーブル定義"""
 
-    __tablename__ = "feeds"
+    __tablename__: ClassVar[Any] = "feeds"
 
     id: str = SQLField(primary_key=True, index=True)
     url: str = SQLField(nullable=False)
@@ -49,7 +53,7 @@ def create_feed(url: str, title: str, status_code: int, pub_date: datetime) -> F
     feed_id = hash_text_sha256(url)
     return Feed(
         id=feed_id,
-        url=url,
+        url=_ensure_http_url(url),
         title=title,
         status_code=status_code,
         pub_date=pub_date,
@@ -104,7 +108,7 @@ def _load_feeds(*, limit: int, offset: int) -> list[Feed]:
     with session_scope() as session:
         statement = (
             select(_FeedRecord)
-            .order_by(_FeedRecord.pub_date.desc())
+            .order_by(desc(cast(Any, _FeedRecord.pub_date)))
             .offset(offset)
             .limit(limit)
         )
@@ -125,11 +129,17 @@ def _feed_to_record(feed: Feed) -> _FeedRecord:
 def _record_to_domain(record: _FeedRecord) -> Feed:
     return Feed(
         id=record.id,
-        url=record.url,
+        url=_ensure_http_url(record.url),
         title=record.title,
         status_code=record.status_code,
         pub_date=record.pub_date,
     )
+
+
+def _ensure_http_url(value: str | HttpUrl) -> HttpUrl:
+    """文字列を含むURL入力をHttpUrlとして検証する"""
+
+    return HTTP_URL_ADAPTER.validate_python(value)
 
 
 class Tests:
