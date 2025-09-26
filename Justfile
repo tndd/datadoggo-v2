@@ -1,15 +1,11 @@
 set shell := ["bash", "-lc"]
 
-fmt:
+sync:
+	uvsync
+	uv pip install -e .
+
+test:
 	uv run ruff format .
-
-check:
 	uv run ruff check .
-
-pyright:
 	uv run pyright
-
-pytest:
 	uv run pytest
-
-test: fmt check pyright pytest
