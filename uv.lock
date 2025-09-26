@@ -409,6 +409,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "pyfakefs" },
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -431,6 +432,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "pyfakefs", specifier = ">=5.9.3" },
     { name = "pyright", specifier = ">=1.1.405" },
     { name = "pytest", specifier = ">=8.4.2" },
     { name = "pytest-asyncio", specifier = ">=1.2.0" },
@@ -877,6 +879,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/42/5d/b43a5eaa0a80aa7a74b623e365ab9d1882925aa8fbe0d7043b5feeeec935/pydoll_python-2.8.0.tar.gz", hash = "sha256:92069b160d33d5e06300e5452b468d7c5f84c4cf4150ef00bd6c6ccebd1621f6", size = 169774, upload-time = "2025-08-28T04:11:22.814Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/48/45/7be5605fb2b9cecfb905a0ed6c042168b7fdfb53cb4e997d88fb94cf24dc/pydoll_python-2.8.0-py3-none-any.whl", hash = "sha256:6c5fe22c3b61af74695c466f5adb361a604f10f34a483d2832b196b1b00d9e1c", size = 194644, upload-time = "2025-08-28T04:11:21.671Z" },
+]
+
+[[package]]
+name = "pyfakefs"
+version = "5.9.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/9b/66/a90124bc9f0d2335897a7d077941f12eaa06c851c8d1b1f37967424d7aa8/pyfakefs-5.9.3.tar.gz", hash = "sha256:b458b11abc8862d4d8500816170a9b25e10d07437332b9dffd651069f3d4c40c", size = 229964, upload-time = "2025-08-29T18:34:21.032Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e7/61/d2b795a4d19713a2312d54b0c001002441f71188d6a3e11e43ddfa03bb1b/pyfakefs-5.9.3-py3-none-any.whl", hash = "sha256:14a0514e94ff156543208c0b4832facc68bdf19de993799b67d58dd5ca05ef30", size = 245197, upload-time = "2025-08-29T18:34:19.112Z" },
 ]
 
 [[package]]

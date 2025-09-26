@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Union
 
+from pyfakefs.fake_filesystem import FakeFilesystem
+
 from src.infra.compute import (
     DEFAULT_MAX_STORAGE_KEY_LENGTH,
     compress_bytes_to_zstd,
@@ -151,7 +153,7 @@ def _to_compressed_bytes(
 
 
 class Tests:
-    def test_save_and_load_text(self, tmp_path: Path) -> None:
+    def test_save_and_load_text(self, fs: FakeFilesystem) -> None:
         """
         docs:
             目的: テキストを圧縮して保存し復元できることを確認する。
@@ -161,7 +163,8 @@ class Tests:
         """
 
         text = "テキストデータの保存テスト"
-        storage_root = tmp_path / "data" / "bucket"
+        fs.create_dir("/data")
+        storage_root = Path("/data/bucket")
 
         key = save_object(
             text,
@@ -178,7 +181,7 @@ class Tests:
         loaded = load_object("objects", key, storage_root=storage_root, as_text=True)
         assert loaded == text
 
-    def test_save_and_load_bytes(self, tmp_path: Path) -> None:
+    def test_save_and_load_bytes(self, fs: FakeFilesystem) -> None:
         """
         docs:
             目的: バイト列を圧縮して保存し復元できることを確認する。
@@ -188,7 +191,8 @@ class Tests:
         """
 
         payload = b"binary-data" * 4
-        storage_root = tmp_path / "data" / "bucket"
+        fs.create_dir("/data")
+        storage_root = Path("/data/bucket")
 
         key = save_object(
             payload,
@@ -202,7 +206,7 @@ class Tests:
         assert isinstance(loaded, bytes)
         assert loaded == payload
 
-    def test_search_object_keys(self, tmp_path: Path) -> None:
+    def test_search_object_keys(self, fs: FakeFilesystem) -> None:
         """
         docs:
             目的: 保存済みオブジェクトの一覧取得を確認する。
@@ -211,7 +215,8 @@ class Tests:
                 - プレフィックス指定で絞り込みが行われる。
         """
 
-        storage_root = tmp_path / "data" / "bucket"
+        fs.create_dir("/data")
+        storage_root = Path("/data/bucket")
 
         key1 = save_object(
             "obj1",
@@ -232,7 +237,7 @@ class Tests:
         filtered = search_object_keys("objects", prefix=key1, storage_root=storage_root)
         assert filtered == [key1]
 
-    def test_error_handling(self, tmp_path: Path) -> None:
+    def test_error_handling(self, fs: FakeFilesystem) -> None:
         """
         docs:
             目的: 未保存データに対するエラーハンドリングを確認する。
@@ -241,7 +246,8 @@ class Tests:
                 - 存在しないバケット検索時に空リストを返す。
         """
 
-        storage_root = tmp_path / "data" / "bucket"
+        fs.create_dir("/data")
+        storage_root = Path("/data/bucket")
 
         result = load_object(
             "objects", "missing", storage_root=storage_root, as_text=True
