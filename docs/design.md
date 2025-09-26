@@ -10,7 +10,7 @@ URL取得状況の管理も行う。
 | id          | text(PK)   | URLのhash。Bucket.idとjoinされる              |
 | url         | text       | 記事のURL                                     |
 | title       | text       | 記事のタイトル                                |
-| status_code | int        | HTTPステータスコード                          |
+| status_code | int?       | HTTPステータスコード                          |
 | pub_date    | timestampz | 記事の公開日時。ニュースという特性上UTCを使う |
 
 ### 永続化・接続設定
