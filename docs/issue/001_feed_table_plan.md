@@ -15,7 +15,7 @@
   - Pydantic(BaseModel)によるドメインエンティティ`Feed`。
   - ユーティリティ関数: `build_feed_from_raw`, `create_feed`など。ID生成時は`infra.compute.hash_text`(仮)を利用。
   - 公開ユースケース関数: `store_feed`, `find_feed_by_id`, `search_feeds`。
-  - RDS操作はモジュール内部関数`_save_feed`, `_load_feed_by_id`, `_load_feeds`でカプセル化し、セッション取得は`infra.storage.rds`経由とする。
+  - RDS操作は公開関数内で直接実装し、保存処理のみ`_save_feed`に切り分ける。セッション取得は`infra.storage.rds`経由とする。
 - `src/infra/storage/rds.py`
   - 定数: `DEFAULT_DATABASE_URL`(`sqlite:///data/datadoggo.db`想定)。
   - 関数: `get_database_url`, `create_sqlite_engine`, `get_session_factory`, `initialize_database`。
@@ -40,7 +40,7 @@
 4. **ドメイン層 (`src/domain/news/feed.py`)**
    - `Feed`モデル、入力DTO(`FeedQuery`等)を定義。
    - 公開関数(`store_feed`, `find_feed_by_id`, `search_feeds`)でビジネスロジックを提供し、内部で`_save_feed`などのRDS操作関数を呼び出す。
-   - `_save_feed`等は`infra.storage.rds`のセッションファクトリを利用し、SQLite接続を取得する。
+   - セッション管理は`infra.storage.rds`のコンテキスト(`session_scope`)を利用し、SQLite接続を取得する。
 5. **初期データベース生成**
    - エントリポイント(例:`main.py`)に`initialize_database`呼び出しを追加し、初回起動でテーブルが作成されるようにする。
 6. **テスト整備**
@@ -58,7 +58,7 @@ src/domain/news/feed.py
   ├─ 型: FeedQuery, FeedSearchResult
   ├─ ユーティリティ関数: build_feed_from_raw, create_feed
   ├─ 公開関数: store_feed, find_feed_by_id, search_feeds
-  └─ 内部関数: _save_feed, _load_feed_by_id, _load_feeds
+  └─ 内部関数: _save_feed
 src/infra/storage/rds.py
   ├─ 定数: DEFAULT_DATABASE_URL
   ├─ 関数: get_database_url, create_sqlite_engine, get_session_factory

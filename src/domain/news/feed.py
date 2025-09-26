@@ -64,28 +64,6 @@ def store_feed(feed: Feed) -> Feed:
     """Feedを保存し、保存後の状態を返す"""
 
     _ensure_initialized()
-    return _save_feed(feed)
-
-
-def find_feed_by_id(feed_id: str) -> Optional[Feed]:
-    """IDでFeedを検索し、存在すれば返す"""
-
-    _ensure_initialized()
-    return _load_feed_by_id(feed_id)
-
-
-def search_feeds(query: FeedQuery) -> list[Feed]:
-    """Feedをページングして取得する"""
-
-    _ensure_initialized()
-    return _load_feeds(limit=query.limit, offset=query.offset)
-
-
-def _ensure_initialized() -> None:
-    initialize_database()
-
-
-def _save_feed(feed: Feed) -> Feed:
     with session_scope() as session:
         record = _feed_to_record(feed)
         merged = session.merge(record)
@@ -94,26 +72,36 @@ def _save_feed(feed: Feed) -> Feed:
         return _record_to_domain(merged)
 
 
-def _load_feed_by_id(feed_id: str) -> Optional[Feed]:
+def find_feed_by_id(feed_id: str) -> Optional[Feed]:
+    """IDでFeedを検索し、存在すれば返す"""
+
+    _ensure_initialized()
     with session_scope() as session:
         statement = select(_FeedRecord).where(_FeedRecord.id == feed_id)
-        result = session.exec(statement).first()
-        if result is None:
+        record = session.exec(statement).first()
+        if record is None:
             return None
 
-        return _record_to_domain(result)
+        return _record_to_domain(record)
 
 
-def _load_feeds(*, limit: int, offset: int) -> list[Feed]:
+def search_feeds(query: FeedQuery) -> list[Feed]:
+    """Feedをページングして取得する"""
+
+    _ensure_initialized()
     with session_scope() as session:
         statement = (
             select(_FeedRecord)
             .order_by(desc(cast(Any, _FeedRecord.pub_date)))
-            .offset(offset)
-            .limit(limit)
+            .offset(query.offset)
+            .limit(query.limit)
         )
         records = session.exec(statement).all()
         return [_record_to_domain(item) for item in records]
+
+
+def _ensure_initialized() -> None:
+    initialize_database()
 
 
 def _feed_to_record(feed: Feed) -> _FeedRecord:
