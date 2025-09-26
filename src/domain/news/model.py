@@ -3,8 +3,8 @@ from datetime import datetime
 from pydantic import BaseModel, HttpUrl
 
 
-class Feed(BaseModel):
-    """Feedテーブルのドメイン表現"""
+class FeedItem(BaseModel):
+    """Feedテーブルの要素のドメイン表現"""
 
     id: str
     url: HttpUrl

@@ -16,7 +16,7 @@ from sqlmodel import SQLModel, select
 from infra.compute import hash_text_sha256
 from infra.storage.rds import initialize_database, session_scope
 
-from .model import Feed
+from .model import FeedItem
 
 
 class FeedQuery(BaseModel):
@@ -46,11 +46,11 @@ class _FeedRecord(SQLModel, table=True):
     pub_date: datetime = SQLField(nullable=False)
 
 
-def create_feed(url: str, title: str, status_code: int, pub_date: datetime) -> Feed:
+def create_feed(url: str, title: str, status_code: int, pub_date: datetime) -> FeedItem:
     """URLなどの入力からFeedモデルを生成する。IDはURLのSHA256ハッシュ"""
 
     feed_id = hash_text_sha256(url)
-    return Feed(
+    return FeedItem(
         id=feed_id,
         url=_ensure_http_url(url),
         title=title,
@@ -59,7 +59,7 @@ def create_feed(url: str, title: str, status_code: int, pub_date: datetime) -> F
     )
 
 
-def store_feed(feed: Feed) -> Feed:
+def store_feed(feed: FeedItem) -> FeedItem:
     """
     Feedを保存し、保存後の状態を返す
     再実行すると結果は上書きされる
@@ -74,7 +74,7 @@ def store_feed(feed: Feed) -> Feed:
         return _record_to_domain(merged)
 
 
-def find_feed_by_id(feed_id: str) -> Optional[Feed]:
+def find_feed_by_id(feed_id: str) -> Optional[FeedItem]:
     """IDでFeedを検索し、存在すれば返す"""
 
     _ensure_initialized()
@@ -87,7 +87,7 @@ def find_feed_by_id(feed_id: str) -> Optional[Feed]:
         return _record_to_domain(record)
 
 
-def search_feeds(query: FeedQuery) -> list[Feed]:
+def search_feeds(query: FeedQuery) -> list[FeedItem]:
     """Feedをページングして取得する"""
 
     _ensure_initialized()
@@ -123,7 +123,7 @@ def _ensure_initialized() -> None:
     initialize_database()
 
 
-def _feed_to_record(feed: Feed) -> _FeedRecord:
+def _feed_to_record(feed: FeedItem) -> _FeedRecord:
     return _FeedRecord(
         id=feed.id,
         url=str(feed.url),
@@ -133,8 +133,8 @@ def _feed_to_record(feed: Feed) -> _FeedRecord:
     )
 
 
-def _record_to_domain(record: _FeedRecord) -> Feed:
-    return Feed(
+def _record_to_domain(record: _FeedRecord) -> FeedItem:
+    return FeedItem(
         id=record.id,
         url=_ensure_http_url(record.url),
         title=record.title,
