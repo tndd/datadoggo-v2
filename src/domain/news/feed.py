@@ -61,7 +61,10 @@ def create_feed(url: str, title: str, status_code: int, pub_date: datetime) -> F
 
 
 def store_feed(feed: Feed) -> Feed:
-    """Feedを保存し、保存後の状態を返す"""
+    """
+    Feedを保存し、保存後の状態を返す
+    再実行すると結果は上書きされる
+    """
 
     _ensure_initialized()
     with session_scope() as session:
