@@ -13,39 +13,68 @@ SHA256_HEX_LENGTH = 64
 
 def generate_timestamp() -> str:
     """現在時刻からタイムスタンプ文字列を生成する (YYYYMMDD_HHMMSS)"""
+
     return datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
 def generate_timestamped_filename(
-    prefix: str = "out",
-    suffix: str = "",
-    extension: str = "txt",
-    output_dir: str = "mock",
+    *,
+    prefix: str | None = None,
+    suffix: str | None = None,
+    extension: str | None = None,
+    output_dir: str | Path | None = None,
+    separator: str = "_",
 ) -> str:
-    """タイムスタンプ付きファイルパスを生成する"""
-    timestamp = generate_timestamp()
-    filename_parts = [prefix, timestamp]
+    """タイムスタンプと任意要素を組み合わせたファイルパスを生成する"""
 
-    if suffix:
-        filename_parts.append(suffix)
-
-    filename = "_".join(filename_parts) + f".{extension}"
+    filename = _compose_timestamped_name(
+        prefix=prefix, suffix=suffix, extension=extension, separator=separator
+    )
+    if output_dir is None:
+        return filename
     return str(Path(output_dir) / filename)
 
 
 def generate_timestamped_key(
-    prefix: str = "content",
-    suffix: str = "",
-    extension: str = "html.zst",
+    *,
+    prefix: str | None = None,
+    suffix: str | None = None,
+    extension: str | None = None,
+    separator: str = "_",
 ) -> str:
-    """タイムスタンプ付きオブジェクトキーを生成する"""
+    """タイムスタンプを含むストレージキーを生成する"""
+
+    return _compose_timestamped_name(
+        prefix=prefix, suffix=suffix, extension=extension, separator=separator
+    )
+
+
+def _compose_timestamped_name(
+    *,
+    prefix: str | None,
+    suffix: str | None,
+    extension: str | None,
+    separator: str,
+) -> str:
+    """タイムスタンプとオプション要素を結合して一意な名前を作る"""
+
     timestamp = generate_timestamp()
-    key_parts = [prefix, timestamp]
+    elements = [prefix, timestamp, suffix]
+    parts = [part for part in elements if part]
+    if not parts:
+        parts = [timestamp]
 
-    if suffix:
-        key_parts.append(suffix)
+    base_name = separator.join(parts)
+    normalized_extension = _normalize_extension(extension)
+    return f"{base_name}{normalized_extension}"
 
-    return "_".join(key_parts) + f".{extension}"
+
+def _normalize_extension(extension: str | None) -> str:
+    """拡張子をプレフィックス付きの形式に整形する"""
+
+    if not extension:
+        return ""
+    return extension if extension.startswith(".") else f".{extension}"
 
 
 def is_safe_storage_key(
@@ -145,17 +174,20 @@ class Tests:
                 - プレフィックス、サフィックス、拡張子が正しく反映される。
                 - ディレクトリパスが正しく結合される。
         """
-        # デフォルト
+        # デフォルト: タイムスタンプのみ
         filename = generate_timestamped_filename()
-        assert filename.startswith("mock/out_")
-        assert filename.endswith(".txt")
+        assert Path(filename).parent == Path(".")
+        assert Path(filename).suffix == ""
 
         # カスタム設定
         filename = generate_timestamped_filename(
-            prefix="test", suffix="data", extension="html", output_dir="output"
+            prefix="test",
+            suffix="data",
+            extension="html",
+            output_dir="output",
         )
         assert filename.startswith("output/test_")
-        assert "data" in filename
+        assert "data" in Path(filename).stem
         assert filename.endswith(".html")
 
     def test_generate_timestamped_key(self) -> None:
@@ -166,15 +198,16 @@ class Tests:
                 - プレフィックス、サフィックス、拡張子が正しく反映される。
                 - パス区切り文字が含まれない。
         """
-        # デフォルト
+        # デフォルト: タイムスタンプのみ
         key = generate_timestamped_key()
-        assert key.startswith("content_")
-        assert key.endswith(".html.zst")
         assert "/" not in key
+        assert key.count("_") == 1  # YYYYMMDD_HHMMSS
 
         # カスタム設定
         key = generate_timestamped_key(
-            prefix="scrape", suffix="page", extension="json.gz"
+            prefix="scrape",
+            suffix="page",
+            extension="json.gz",
         )
         assert key.startswith("scrape_")
         assert "page" in key
