@@ -1,38 +1,38 @@
 # テーブル定義
 Option指定なき場合、NOT NULL制約とする。
 
-## ArticleLink
-記事のリンク
+## Feed
+RSSフィードの要素を保存するテーブル。
+URL取得状況の管理も行う。
 
-| name     | type       | description                                   |
-| -------- | ---------- | --------------------------------------------- |
-| url      | text       | URLを主キーとする                             |
-| title    | text       | 記事のタイトル                                |
-| source   | text       | どこから取得されたリンクかを表す              |
-| pub_data | timestampz | 記事の公開日時。ニュースという特性上UTCを使う |
+| name        | type       | description                                   |
+| ----------- | ---------- | --------------------------------------------- |
+| id          | text(PK)   | URLのhash。Bucket.idとjoinされる              |
+| url         | text       | 記事のURL                                     |
+| title       | text       | 記事のタイトル                                |
+| status_code | int        | HTTPステータスコード                          |
+| pub_date    | timestampz | 記事の公開日時。ニュースという特性上UTCを使う |
 
-## ArticleContent
-記事の内容を保存するテーブル。linkとjoinして使う。
+### 永続化・接続設定
+- デフォルトでは`sqlite:///data/datadoggo.db`に保存する。
+- 環境変数`FEED_DATABASE_URL`を設定すると接続先を切り替えられる。
+- テーブル初期化はアプリケーション起動時に`initialize_database()`で行う。
 
-| name        | type       | description                                |
-| ----------- | ---------- | ------------------------------------------ |
-| url         | str(FK)    | linkのurlを外部キーとする                  |
-| created_at  | timestampz | 作成日時。デフォルトは現在時刻             |
-| updated_at  | timestampz | 更新日時。デフォルトは現在時刻             |
-| status_code | int        | HTTPステータスコード                       |
-| content     | text       | 記事の内容。取得に失敗しても空文字は入れる |
+## Bucket
+データの保存先を管理するテーブル。
+
+| name           | type       | description                    |
+| -------------- | ---------- | ------------------------------ |
+| id             | text(PK)   | sha256 hash                    |
+| created_at     | timestampz | 作成日時。デフォルトは現在時刻 |
+| updated_at     | timestampz | 更新日時。デフォルトは現在時刻 |
+| content_path   | text       | 記事が保存されているパス       |
+| content_digest | text       | 記事の内容のハッシュ           |
+
+**join元:**
+- Feed.id = Bucket.id
 
 # ドメインモデル
-## ArticleUrlStatus
-URLごとの取得状況を確認するためのモデル。
-
-| name        | type          | description                                                            |
-| ----------- | ------------- | ---------------------------------------------------------------------- |
-| url         | text          | URLを主キーとする                                                      |
-| status      | text          | 取得状況。成功か失敗かを表す                                           |
-| pub_data    | timestampz    | 記事の公開日時                                                         |
-| status_code | int(Optional) | HTTPステータスコード。未実行のものがjoinされる可能性があるためOptional |
-
 
 ## Article
 ArticleLinkにArticleContentをjoinしたもの。
@@ -40,9 +40,10 @@ ArticleLinkにArticleContentをjoinしたもの。
 
 | name     | type       | description                             |
 | -------- | ---------- | --------------------------------------- |
-| url      | text       | URLを主キーとする                       |
+| id       | text(PK)   | URLのhash                               |
+| url      | text       | 記事のURL                               |
 | title    | text       | 記事のタイトル                          |
-| pub_data | timestampz | 公開日時。ニュースという特性上UTCを使う |
+| pub_date | timestampz | 公開日時。ニュースという特性上UTCを使う |
 | content  | text       | 記事の内容                              |
 
 # 関数
