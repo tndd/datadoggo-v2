@@ -15,10 +15,10 @@ src
 
 
 # 環境変数の設定
-このプロジェクトは**環境変数でのテスト・本番切り替え**の仕組みがある。
-`.env`ファイルには以下の設定が必要。
+`Feed`テーブルの接続先は環境変数`FEED_DATABASE_URL`で切り替えられる。
+未設定時は`sqlite:///data/feed.db`が利用される。
 
 ```bash
-DATABASE_URL=postgresql://datadoggo:datadoggo@localhost:16432/datadoggo_test
-DATABASE_URL_PROD=postgresql://datadoggo:datadoggo@localhost:15432/datadoggo
+# 例: テスト時に一時ファイルへ切り替える
+FEED_DATABASE_URL=sqlite:///tmp/test-feed.db
 ```

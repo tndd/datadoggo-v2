@@ -7,11 +7,11 @@
 
 ## 目標
 - SQLModelを中核に据え、SQLite向けの`Feed`テーブル操作をシンプルに実装する。
-- ドメイン層(`src/domain/feed.py`)でドメインモデル・入力DTO・ユースケース関数をまとめ、RDS関連処理はモジュール内の内部関数として保持する。
+- ドメイン層(`src/domain/news/feed.py`)でドメインモデル・入力DTO・ユースケース関数をまとめ、RDS関連処理はモジュール内の内部関数として保持する。
 - ハッシュ生成などの汎用計算ロジックは`infra/compute.py`に集約し、ドメインはそれを利用してID生成を行う。
 
 ## モジュール構成案
-- `src/domain/feed.py`
+- `src/domain/news/feed.py`
   - Pydantic(BaseModel)によるドメインエンティティ`Feed`。
   - ユーティリティ関数: `build_feed_from_raw`, `create_feed`など。ID生成時は`infra.compute.hash_text`(仮)を利用。
   - 公開ユースケース関数: `store_feed`, `find_feed_by_id`, `search_feeds`。
@@ -37,7 +37,7 @@
    - `initialize_database`で`SQLModel.metadata.create_all`を実行し、テーブルを生成。
 3. **ハッシュユーティリティ整備 (`src/infra/compute.py`)**
    - URL文字列をハッシュ化する関数(例:`hash_text_sha256`)を定義し、既存利用箇所との整合性を確認。
-4. **ドメイン層 (`src/domain/feed.py`)**
+4. **ドメイン層 (`src/domain/news/feed.py`)**
    - `Feed`モデル、入力DTO(`FeedQuery`等)を定義。
    - 公開関数(`store_feed`, `find_feed_by_id`, `search_feeds`)でビジネスロジックを提供し、内部で`_save_feed`などのRDS操作関数を呼び出す。
    - `_save_feed`等は`infra.rds`のセッションファクトリを利用し、SQLite接続を取得する。
@@ -53,7 +53,7 @@
 
 ## モジュール構造ツリー
 ```
-src/domain/feed.py
+src/domain/news/feed.py
   ├─ モデル: Feed
   ├─ 型: FeedQuery, FeedSearchResult
   ├─ ユーティリティ関数: build_feed_from_raw, create_feed
