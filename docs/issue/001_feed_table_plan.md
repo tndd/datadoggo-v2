@@ -19,6 +19,7 @@
 - `src/infra/storage/rds.py`
   - 定数: `DEFAULT_DATABASE_URL`(`sqlite:///data/datadoggo.db`想定)。
   - 関数: `get_database_url`, `create_sqlite_engine`, `get_session_factory`, `initialize_database`。
+  - SQLiteファイル利用時は親ディレクトリを自動生成する。
   - `SQLModel.metadata.create_all`を使って初期化を行う。
 - `src/infra/compute.py`
   - 既存の計算系ユーティリティに、URLハッシュ生成関数(例: `hash_text_sha256`)を追加/利用することで`Feed`のID生成に流用。

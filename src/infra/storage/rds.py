@@ -3,9 +3,10 @@
 import os
 from collections.abc import Callable
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Iterator
 
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Engine, make_url
 from sqlmodel import Session, SQLModel, create_engine
 
 DEFAULT_DATABASE_URL = "sqlite:///data/datadoggo.db"
@@ -22,6 +23,7 @@ def create_sqlite_engine(url: str | None = None, *, echo: bool = False) -> Engin
     """SQLite向けのSQLAlchemyエンジンを生成する"""
 
     database_url = url or get_database_url()
+    _ensure_sqlite_directory(database_url)
     connect_args = {}
     if database_url.startswith("sqlite"):
         connect_args = {"check_same_thread": False}
@@ -61,3 +63,21 @@ def initialize_database(engine: Engine | None = None) -> None:
 
     target_engine = engine or create_sqlite_engine()
     SQLModel.metadata.create_all(target_engine)
+
+
+def _ensure_sqlite_directory(database_url: str) -> None:
+    """SQLiteファイルの親ディレクトリを事前に作成する"""
+
+    if not database_url.startswith("sqlite"):
+        return
+
+    url = make_url(database_url)
+    database = url.database
+    if not database or database == ":memory:":
+        return
+
+    db_path = Path(database)
+    if not db_path.is_absolute():
+        db_path = Path.cwd() / db_path
+
+    db_path.parent.mkdir(parents=True, exist_ok=True)

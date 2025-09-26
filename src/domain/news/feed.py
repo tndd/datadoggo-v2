@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import os
+import shutil
 from datetime import datetime
+from pathlib import Path
 from typing import Any, ClassVar, Optional, cast
 
 from pydantic import BaseModel, Field, HttpUrl, TypeAdapter
@@ -288,6 +290,39 @@ class Tests:
         assert [item.id for item in url_filtered] == [feed_other.id]
 
         os.environ.pop("FEED_DATABASE_URL", None)
+
+    def test_store_feed_creates_database_directory(self) -> None:
+        """
+        docs:
+            目的:
+                SQLiteファイル保存時に親ディレクトリが自動生成されるか確認する。
+            検証観点:
+                - 未作成のディレクトリでも store_feed が成功する。
+                - 処理後にディレクトリとファイルが存在する。
+        """
+
+        target_dir = Path("tmp-feed-storage")
+        target_db = target_dir / "test.db"
+        if target_dir.exists():
+            shutil.rmtree(target_dir)
+
+        os.environ["FEED_DATABASE_URL"] = f"sqlite:///{target_db}"
+
+        try:
+            feed = create_feed(
+                url="https://example.com/new",
+                title="New Entry",
+                status_code=200,
+                pub_date=datetime(2024, 1, 15, 9, 0, 0),
+            )
+            store_feed(feed)
+
+            assert target_dir.exists()
+            assert target_db.exists()
+        finally:
+            os.environ.pop("FEED_DATABASE_URL", None)
+            if target_dir.exists():
+                shutil.rmtree(target_dir)
 
     def test_find_feed_by_id_returns_none_when_missing(self, tmp_path) -> None:
         """
