@@ -1,6 +1,13 @@
+"""Feedドメインモデル群"""
+
+from __future__ import annotations
+
 from datetime import datetime
+from typing import Any, ClassVar
 
 from pydantic import BaseModel, HttpUrl
+from sqlmodel import Field as SQLField
+from sqlmodel import SQLModel
 
 
 class FeedItem(BaseModel):
@@ -11,3 +18,15 @@ class FeedItem(BaseModel):
     title: str
     status_code: int
     pub_date: datetime
+
+
+class FeedRecord(SQLModel, table=True):
+    """SQLModelによるFeedテーブル定義"""
+
+    __tablename__: ClassVar[Any] = "feeds"
+
+    id: str = SQLField(primary_key=True, index=True)
+    url: str = SQLField(nullable=False)
+    title: str = SQLField(nullable=False)
+    status_code: int = SQLField(nullable=False)
+    pub_date: datetime = SQLField(nullable=False)

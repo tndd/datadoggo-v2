@@ -10,16 +10,11 @@ from pathlib import Path
 from sqlmodel import select
 
 from infra.compute import hash_text_sha256
-from infra.storage.rds import session_scope
+from infra.storage.rds import initialize_database, session_scope
 
-from .model import FeedItem
-from .persistence import (
-    _FeedRecord,
-    ensure_feed_table_initialized,
-    ensure_http_url,
-    feed_to_record,
-    record_to_feed,
-)
+from .convert import feed_to_record, record_to_feed
+from .model import FeedItem, FeedRecord
+from .service import ensure_http_url
 
 
 def create_feed(url: str, title: str, status_code: int, pub_date: datetime) -> FeedItem:
@@ -38,7 +33,7 @@ def create_feed(url: str, title: str, status_code: int, pub_date: datetime) -> F
 def store_feed(feed: FeedItem) -> FeedItem:
     """Feedを保存し、保存後の状態を返す"""
 
-    ensure_feed_table_initialized()
+    initialize_database()
     with session_scope() as session:
         record = feed_to_record(feed)
         merged = session.merge(record)
@@ -74,7 +69,7 @@ class Tests:
             assert stored.status_code == feed.status_code
 
             with session_scope() as session:
-                statement = select(_FeedRecord).where(_FeedRecord.id == feed.id)
+                statement = select(FeedRecord).where(FeedRecord.id == feed.id)
                 record = session.exec(statement).first()
                 assert record is not None
                 assert record.title == "Store Feed"

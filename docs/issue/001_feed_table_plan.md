@@ -7,7 +7,7 @@
 
 ## 目標
 - SQLModelを中核に据え、SQLite向けの`Feed`テーブル操作をシンプルに実装する。
-- ドメイン層では書き込み(`command.py`)と読み出し(`search.py`)を明確に分離し、永続化関連の共通処理は`persistence.py`に配置する。
+- ドメイン層では書き込み(`command.py`)と読み出し(`search.py`)を明確に分離し、永続化レコードは`model.py`、変換処理は`convert.py`、初期化ヘルパーは`service.py`に配置する。
 - ハッシュ生成などの汎用計算ロジックは`infra/compute.py`に集約し、ドメインはそれを利用してID生成を行う。
 
 ## モジュール構成案
@@ -15,8 +15,12 @@
   - `create_feed`で入力をドメインモデル化し、`store_feed`で永続化する。
 - `src/domain/news/feed/search.py`
   - `FeedQuery`入力モデルと、`find_feed_by_id`/`search_feeds`による読み出し処理を提供する。
-- `src/domain/news/feed/persistence.py`
-  - `_FeedRecord`テーブル定義と、永続化レイヤ共通の変換・初期化ヘルパーを提供する。
+- `src/domain/news/feed/model.py`
+  - `FeedItem`と`FeedRecord`を定義する。
+- `src/domain/news/feed/convert.py`
+  - URL検証とレコード⇔ドメイン変換ロジックを提供する。
+- `src/domain/news/feed/service.py`
+  - URL検証ヘルパー(`ensure_http_url`)を提供する。
 - `src/infra/storage/rds.py`
   - 定数: `DEFAULT_DATABASE_URL`(`sqlite:///data/datadoggo.db`想定)。
   - 関数: `get_database_url`, `create_sqlite_engine`, `get_session_factory`, `initialize_database`。
@@ -40,9 +44,10 @@
 3. **ハッシュユーティリティ整備 (`src/infra/compute.py`)**
    - URL文字列をハッシュ化する関数(例:`hash_text_sha256`)を定義し、既存利用箇所との整合性を確認。
 4. **ドメイン層 (`src/domain/news/feed/`)**
-   - `model.py`で`FeedItem`を定義。
-   - `command.py`で`create_feed`/`store_feed`を提供し、`persistence.py`の変換ヘルパーを利用する。
-   - `search.py`で`FeedQuery`・`find_feed_by_id`・`search_feeds`を提供し、フィルタリングとページングを担う。
+   - `model.py`で`FeedItem`/`FeedRecord`を定義。
+   - `convert.py`でURL検証と変換ヘルパーを提供する。
+   - `command.py`で`create_feed`/`store_feed`を提供し、`convert.py`・`service.py`を利用する。
+   - `search.py`で`FeedQuery`・`find_feed_by_id`・`search_feeds`を提供する。
 5. **初期データベース生成**
    - エントリポイント(例:`main.py`)に`initialize_database`呼び出しを追加し、初回起動でテーブルが作成されるようにする。
 6. **テスト整備**
@@ -57,8 +62,8 @@
 ```
 src/domain/news/feed
   ├─ command.py (create_feed, store_feed)
-  ├─ model.py (FeedItem)
-  ├─ persistence.py (_FeedRecord, ensure_feed_table_initialized, feed_to_record, record_to_feed)
+  ├─ convert.py (ensure_http_url, feed_to_record, record_to_feed)
+  ├─ model.py (FeedItem, FeedRecord)
   └─ search.py (FeedQuery, find_feed_by_id, search_feeds)
 src/infra/storage/rds.py
   ├─ 定数: DEFAULT_DATABASE_URL

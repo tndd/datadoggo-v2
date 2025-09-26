@@ -10,10 +10,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy import desc
 from sqlmodel import select
 
-from infra.storage.rds import session_scope
+from infra.storage.rds import initialize_database, session_scope
 
-from .model import FeedItem
-from .persistence import _FeedRecord, ensure_feed_table_initialized, record_to_feed
+from .convert import record_to_feed
+from .model import FeedItem, FeedRecord
 
 
 class FeedQuery(BaseModel):
@@ -31,9 +31,9 @@ class FeedQuery(BaseModel):
 def find_feed_by_id(feed_id: str) -> FeedItem | None:
     """IDでFeedを検索し、存在すれば返す"""
 
-    ensure_feed_table_initialized()
+    initialize_database()
     with session_scope() as session:
-        statement = select(_FeedRecord).where(_FeedRecord.id == feed_id)
+        statement = select(FeedRecord).where(FeedRecord.id == feed_id)
         record = session.exec(statement).first()
         if record is None:
             return None
@@ -44,28 +44,28 @@ def find_feed_by_id(feed_id: str) -> FeedItem | None:
 def search_feeds(query: FeedQuery) -> list[FeedItem]:
     """Feedをページングして取得する"""
 
-    ensure_feed_table_initialized()
+    initialize_database()
     with session_scope() as session:
-        statement = select(_FeedRecord)
+        statement = select(FeedRecord)
 
         if query.title:
-            title_expr = cast(Any, _FeedRecord.title)
+            title_expr = cast(Any, FeedRecord.title)
             statement = statement.where(title_expr.contains(query.title))
 
         if query.url:
-            statement = statement.where(_FeedRecord.url == query.url)
+            statement = statement.where(FeedRecord.url == query.url)
 
         if query.status_code is not None:
-            statement = statement.where(_FeedRecord.status_code == query.status_code)
+            statement = statement.where(FeedRecord.status_code == query.status_code)
 
         if query.pub_date_from is not None:
-            statement = statement.where(_FeedRecord.pub_date >= query.pub_date_from)
+            statement = statement.where(FeedRecord.pub_date >= query.pub_date_from)
 
         if query.pub_date_to is not None:
-            statement = statement.where(_FeedRecord.pub_date <= query.pub_date_to)
+            statement = statement.where(FeedRecord.pub_date <= query.pub_date_to)
 
         statement = (
-            statement.order_by(desc(cast(Any, _FeedRecord.pub_date)))
+            statement.order_by(desc(cast(Any, FeedRecord.pub_date)))
             .offset(query.offset)
             .limit(query.limit)
         )
