@@ -11,7 +11,7 @@ from sqlmodel import Field as SQLField
 from sqlmodel import SQLModel, select
 
 from infra.compute import hash_text_sha256
-from infra.rds import initialize_database, session_scope
+from infra.storage.rds import initialize_database, session_scope
 
 
 class Feed(BaseModel):

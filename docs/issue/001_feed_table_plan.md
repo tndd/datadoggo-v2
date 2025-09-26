@@ -15,8 +15,8 @@
   - Pydantic(BaseModel)によるドメインエンティティ`Feed`。
   - ユーティリティ関数: `build_feed_from_raw`, `create_feed`など。ID生成時は`infra.compute.hash_text`(仮)を利用。
   - 公開ユースケース関数: `store_feed`, `find_feed_by_id`, `search_feeds`。
-  - RDS操作はモジュール内部関数`_save_feed`, `_load_feed_by_id`, `_load_feeds`でカプセル化し、セッション取得は`infra.rds`経由とする。
-- `src/infra/rds.py`
+  - RDS操作はモジュール内部関数`_save_feed`, `_load_feed_by_id`, `_load_feeds`でカプセル化し、セッション取得は`infra.storage.rds`経由とする。
+- `src/infra/storage/rds.py`
   - 定数: `DEFAULT_DATABASE_URL`(`sqlite:///data/feed.db`想定)。
   - 関数: `get_database_url`, `create_sqlite_engine`, `get_session_factory`, `initialize_database`。
   - `SQLModel.metadata.create_all`を使って初期化を行う。
@@ -31,7 +31,7 @@
 1. **依存パッケージ追加**
    - `uv add sqlmodel`を実行し、`pyproject.toml`/`uv.lock`を更新。
    - 互換性を確認。
-2. **インフラ基盤 (`src/infra/rds.py`)**
+2. **インフラ基盤 (`src/infra/storage/rds.py`)**
    - `FEED_DATABASE_URL`環境変数を読み、未設定時は`DEFAULT_DATABASE_URL`を返す`get_database_url`を実装。
    - SQLModel用エンジン/セッションファクトリを返す`create_sqlite_engine`/`get_session_factory`を用意。
    - `initialize_database`で`SQLModel.metadata.create_all`を実行し、テーブルを生成。
@@ -40,7 +40,7 @@
 4. **ドメイン層 (`src/domain/news/feed.py`)**
    - `Feed`モデル、入力DTO(`FeedQuery`等)を定義。
    - 公開関数(`store_feed`, `find_feed_by_id`, `search_feeds`)でビジネスロジックを提供し、内部で`_save_feed`などのRDS操作関数を呼び出す。
-   - `_save_feed`等は`infra.rds`のセッションファクトリを利用し、SQLite接続を取得する。
+   - `_save_feed`等は`infra.storage.rds`のセッションファクトリを利用し、SQLite接続を取得する。
 5. **初期データベース生成**
    - エントリポイント(例:`main.py`)に`initialize_database`呼び出しを追加し、初回起動でテーブルが作成されるようにする。
 6. **テスト整備**
@@ -59,7 +59,7 @@ src/domain/news/feed.py
   ├─ ユーティリティ関数: build_feed_from_raw, create_feed
   ├─ 公開関数: store_feed, find_feed_by_id, search_feeds
   └─ 内部関数: _save_feed, _load_feed_by_id, _load_feeds
-src/infra/rds.py
+src/infra/storage/rds.py
   ├─ 定数: DEFAULT_DATABASE_URL
   ├─ 関数: get_database_url, create_sqlite_engine, get_session_factory
   └─ 関数: initialize_database
