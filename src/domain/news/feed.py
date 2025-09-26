@@ -16,15 +16,7 @@ from sqlmodel import SQLModel, select
 from infra.compute import hash_text_sha256
 from infra.storage.rds import initialize_database, session_scope
 
-
-class Feed(BaseModel):
-    """Feedテーブルのドメイン表現"""
-
-    id: str
-    url: HttpUrl
-    title: str
-    status_code: int
-    pub_date: datetime
+from .model import Feed
 
 
 class FeedQuery(BaseModel):
