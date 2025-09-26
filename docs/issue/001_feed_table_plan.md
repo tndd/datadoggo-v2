@@ -7,15 +7,16 @@
 
 ## 目標
 - SQLModelを中核に据え、SQLite向けの`Feed`テーブル操作をシンプルに実装する。
-- ドメイン層(`src/domain/news/feed.py`)でドメインモデル・入力DTO・ユースケース関数をまとめ、RDS関連処理はモジュール内の内部関数として保持する。
+- ドメイン層では書き込み(`command.py`)と読み出し(`search.py`)を明確に分離し、永続化関連の共通処理は`persistence.py`に配置する。
 - ハッシュ生成などの汎用計算ロジックは`infra/compute.py`に集約し、ドメインはそれを利用してID生成を行う。
 
 ## モジュール構成案
-- `src/domain/news/feed.py`
-  - Pydantic(BaseModel)によるドメインエンティティ`Feed`。
-  - ユーティリティ関数: `build_feed_from_raw`, `create_feed`など。ID生成時は`infra.compute.hash_text`(仮)を利用。
-  - 公開ユースケース関数: `store_feed`, `find_feed_by_id`, `search_feeds`。
-  - RDS操作は公開関数内で直接実装し、保存処理のみ`_save_feed`に切り分ける。セッション取得は`infra.storage.rds`経由とする。
+- `src/domain/news/feed/command.py`
+  - `create_feed`で入力をドメインモデル化し、`store_feed`で永続化する。
+- `src/domain/news/feed/search.py`
+  - `FeedQuery`入力モデルと、`find_feed_by_id`/`search_feeds`による読み出し処理を提供する。
+- `src/domain/news/feed/persistence.py`
+  - `_FeedRecord`テーブル定義と、永続化レイヤ共通の変換・初期化ヘルパーを提供する。
 - `src/infra/storage/rds.py`
   - 定数: `DEFAULT_DATABASE_URL`(`sqlite:///data/datadoggo.db`想定)。
   - 関数: `get_database_url`, `create_sqlite_engine`, `get_session_factory`, `initialize_database`。
@@ -38,10 +39,10 @@
    - `initialize_database`で`SQLModel.metadata.create_all`を実行し、テーブルを生成。
 3. **ハッシュユーティリティ整備 (`src/infra/compute.py`)**
    - URL文字列をハッシュ化する関数(例:`hash_text_sha256`)を定義し、既存利用箇所との整合性を確認。
-4. **ドメイン層 (`src/domain/news/feed.py`)**
-   - `Feed`モデル、入力DTO(`FeedQuery`等)を定義。
-  - 公開関数(`store_feed`, `find_feed_by_id`, `search_feeds`)でビジネスロジックを提供し、`search_feeds`ではtitle/url/status_code/pub_date範囲のフィルタリングを行う。
-   - セッション管理は`infra.storage.rds`のコンテキスト(`session_scope`)を利用し、SQLite接続を取得する。
+4. **ドメイン層 (`src/domain/news/feed/`)**
+   - `model.py`で`FeedItem`を定義。
+   - `command.py`で`create_feed`/`store_feed`を提供し、`persistence.py`の変換ヘルパーを利用する。
+   - `search.py`で`FeedQuery`・`find_feed_by_id`・`search_feeds`を提供し、フィルタリングとページングを担う。
 5. **初期データベース生成**
    - エントリポイント(例:`main.py`)に`initialize_database`呼び出しを追加し、初回起動でテーブルが作成されるようにする。
 6. **テスト整備**
@@ -54,12 +55,11 @@
 
 ## モジュール構造ツリー
 ```
-src/domain/news/feed.py
-  ├─ モデル: Feed
-  ├─ 型: FeedQuery(limit/offset/title/url/status_code/pub_date_from/pub_date_to), FeedSearchResult
-  ├─ ユーティリティ関数: build_feed_from_raw, create_feed
-  ├─ 公開関数: store_feed, find_feed_by_id, search_feeds
-  └─ 内部関数: _save_feed
+src/domain/news/feed
+  ├─ command.py (create_feed, store_feed)
+  ├─ model.py (FeedItem)
+  ├─ persistence.py (_FeedRecord, ensure_feed_table_initialized, feed_to_record, record_to_feed)
+  └─ search.py (FeedQuery, find_feed_by_id, search_feeds)
 src/infra/storage/rds.py
   ├─ 定数: DEFAULT_DATABASE_URL
   ├─ 関数: get_database_url, create_sqlite_engine, get_session_factory
