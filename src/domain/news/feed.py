@@ -154,7 +154,7 @@ class Tests:
                 - status_code や pub_date などの属性が保持される。
         """
 
-        db_path = tmp_path / "feed.db"
+        db_path = tmp_path / "datadoggo.db"
         os.environ["FEED_DATABASE_URL"] = f"sqlite:///{db_path}"
 
         feed = create_feed(
@@ -186,7 +186,7 @@ class Tests:
                 - limit/offset が機能する。
         """
 
-        db_path = tmp_path / "feed_search.db"
+        db_path = tmp_path / "datadoggo.db"
         os.environ["FEED_DATABASE_URL"] = f"sqlite:///{db_path}"
 
         feeds = [
@@ -220,7 +220,7 @@ class Tests:
                 - None が返る。
         """
 
-        db_path = tmp_path / "feed_missing.db"
+        db_path = tmp_path / "datadoggo.db"
         os.environ["FEED_DATABASE_URL"] = f"sqlite:///{db_path}"
 
         missing = find_feed_by_id("non-existent")

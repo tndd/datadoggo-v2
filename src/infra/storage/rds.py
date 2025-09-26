@@ -8,7 +8,7 @@ from typing import Iterator
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel, create_engine
 
-DEFAULT_DATABASE_URL = "sqlite:///data/feed.db"
+DEFAULT_DATABASE_URL = "sqlite:///data/datadoggo.db"
 DATABASE_ENV_VAR = "FEED_DATABASE_URL"
 
 

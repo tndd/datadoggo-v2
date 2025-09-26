@@ -14,7 +14,7 @@ URL取得状況の管理も行う。
 | pub_date    | timestampz | 記事の公開日時。ニュースという特性上UTCを使う |
 
 ### 永続化・接続設定
-- デフォルトでは`sqlite:///data/feed.db`に保存する。
+- デフォルトでは`sqlite:///data/datadoggo.db`に保存する。
 - 環境変数`FEED_DATABASE_URL`を設定すると接続先を切り替えられる。
 - テーブル初期化はアプリケーション起動時に`initialize_database()`で行う。
 

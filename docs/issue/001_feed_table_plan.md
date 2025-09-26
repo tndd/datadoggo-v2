@@ -17,7 +17,7 @@
   - 公開ユースケース関数: `store_feed`, `find_feed_by_id`, `search_feeds`。
   - RDS操作はモジュール内部関数`_save_feed`, `_load_feed_by_id`, `_load_feeds`でカプセル化し、セッション取得は`infra.storage.rds`経由とする。
 - `src/infra/storage/rds.py`
-  - 定数: `DEFAULT_DATABASE_URL`(`sqlite:///data/feed.db`想定)。
+  - 定数: `DEFAULT_DATABASE_URL`(`sqlite:///data/datadoggo.db`想定)。
   - 関数: `get_database_url`, `create_sqlite_engine`, `get_session_factory`, `initialize_database`。
   - `SQLModel.metadata.create_all`を使って初期化を行う。
 - `src/infra/compute.py`
@@ -69,7 +69,7 @@ src/infra/compute.py
 
 ## テスト戦略
 - ユニット/インメモリ: `sqlite:///:memory:` を環境変数で指定してCRUD動作を確認。
-- 統合/ローカル: `data/feed.db`(ローカルファイル)で実行し、テーブル生成と永続化の流れを検証。
+- 統合/ローカル: `data/datadoggo.db`(ローカルファイル)で実行し、テーブル生成と永続化の流れを検証。
 - 検証観点
   - `hash_text_sha256`によるID生成と一意制約の保持。
   - `pub_date`のUTC保持、`status_code`必須制約。
