@@ -84,7 +84,8 @@ class Tests:
                 - 取得した FeedItem の属性が保存時と一致する。
         """
 
-        from .command import create_feed, store_feed
+        from .command import store_feed
+        from .service import create_feed
 
         db_path = tmp_path / "search" / "find.db"
         os.environ["FEED_DATABASE_URL"] = f"sqlite:///{db_path}"
@@ -134,7 +135,8 @@ class Tests:
                 - title/status_code/pub_date範囲/url 条件で絞り込める。
         """
 
-        from .command import create_feed, store_feed
+        from .command import store_feed
+        from .service import create_feed
 
         db_path = tmp_path / "search" / "filters.db"
         os.environ["FEED_DATABASE_URL"] = f"sqlite:///{db_path}"

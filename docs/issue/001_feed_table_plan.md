@@ -7,12 +7,12 @@
 
 ## 目標
 - SQLModelを中核に据え、SQLite向けの`Feed`テーブル操作をシンプルに実装する。
-- ドメイン層では書き込み(`command.py`)と読み出し(`search.py`)を明確に分離し、永続化レコードは`model.py`、変換処理は`convert.py`、初期化ヘルパーは`service.py`に配置する。
+- ドメイン層では書き込み(`command.py`)と読み出し(`search.py`)を明確に分離し、永続化レコードは`model.py`、変換処理は`convert.py`、初期化ヘルパーやエンティティ生成は`service.py`に配置する。
 - ハッシュ生成などの汎用計算ロジックは`infra/compute.py`に集約し、ドメインはそれを利用してID生成を行う。
 
 ## モジュール構成案
 - `src/domain/news/feed/command.py`
-  - `create_feed`で入力をドメインモデル化し、`store_feed`で永続化する。
+  - `store_feed`で永続化する。
 - `src/domain/news/feed/search.py`
   - `FeedQuery`入力モデルと、`find_feed_by_id`/`search_feeds`による読み出し処理を提供する。
 - `src/domain/news/feed/model.py`
@@ -20,7 +20,7 @@
 - `src/domain/news/feed/convert.py`
   - URL検証とレコード⇔ドメイン変換ロジックを提供する。
 - `src/domain/news/feed/service.py`
-  - URL検証ヘルパー(`ensure_http_url`)を提供する。
+  - URL検証ヘルパー(`ensure_http_url`)とドメイン生成(`create_feed`)を提供する。
 - `src/infra/storage/rds.py`
   - 定数: `DEFAULT_DATABASE_URL`(`sqlite:///data/datadoggo.db`想定)。
   - 関数: `get_database_url`, `create_sqlite_engine`, `get_session_factory`, `initialize_database`。
@@ -61,10 +61,11 @@
 ## モジュール構造ツリー
 ```
 src/domain/news/feed
-  ├─ command.py (create_feed, store_feed)
+  ├─ command.py (store_feed)
   ├─ convert.py (ensure_http_url, feed_to_record, record_to_feed)
   ├─ model.py (FeedItem, FeedRecord)
-  └─ search.py (FeedQuery, find_feed_by_id, search_feeds)
+  ├─ search.py (FeedQuery, find_feed_by_id, search_feeds)
+  └─ service.py (ensure_http_url, create_feed)
 src/infra/storage/rds.py
   ├─ 定数: DEFAULT_DATABASE_URL
   ├─ 関数: get_database_url, create_sqlite_engine, get_session_factory

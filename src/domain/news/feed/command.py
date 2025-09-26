@@ -9,25 +9,11 @@ from pathlib import Path
 
 from sqlmodel import select
 
-from infra.compute import hash_text_sha256
 from infra.storage.rds import initialize_database, session_scope
 
 from .convert import feed_to_record, record_to_feed
 from .model import FeedItem, FeedRecord
-from .service import ensure_http_url
-
-
-def create_feed(url: str, title: str, status_code: int, pub_date: datetime) -> FeedItem:
-    """入力値からFeedドメインモデルを生成する"""
-
-    feed_id = hash_text_sha256(url)
-    return FeedItem(
-        id=feed_id,
-        url=ensure_http_url(url),
-        title=title,
-        status_code=status_code,
-        pub_date=pub_date,
-    )
+from .service import create_feed
 
 
 def store_feed(feed: FeedItem) -> FeedItem:

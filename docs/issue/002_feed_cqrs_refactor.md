@@ -7,7 +7,7 @@
 
 ## 目的
 - 書き込み系のユースケースは`command.py`、読み出し系は`search.py`で提供する。
-- 永続化レコード定義は`model.py`へ移し、変換ロジックは`convert.py`、初期化処理は`service.py`と役割ごとに分割する。
+- 永続化レコード定義は`model.py`へ移し、変換ロジックは`convert.py`、初期化処理やエンティティ生成は`service.py`と役割ごとに分割する。
 - 公開API (`create_feed`/`store_feed`/`find_feed_by_id`/`search_feeds`/`FeedQuery`) のシグネチャと振る舞いを維持する。
 
 ## スコープ
@@ -24,7 +24,7 @@
 3. **変換ユーティリティ分離**
    - URL検証とレコード変換を`convert.py`に移し、`command`/`search`が直接利用できるようにする。
 4. **サービス層整理**
-   - `service.py`にURL検証ヘルパーを集約し、ドメイン共通のバリデーション処理のみを担わせる。
+   - `service.py`にURL検証ヘルパーとドメイン生成処理を集約し、共通バリデーションとエンティティ生成を担わせる。
 5. **command.py / search.py の依存更新**
    - 新しい`model`/`convert`/`service`構成に合わせて import を整理し、冗長なラップを削除する。
 6. **テスト・ドキュメント更新**
@@ -52,7 +52,6 @@
 src/domain/news
 ├── feed
 │   ├── command.py
-│   │   ├── create_feed(url: str, title: str, status_code: int, pub_date: datetime) -> FeedItem
 │   │   └── store_feed(feed: FeedItem) -> FeedItem
 │   ├── convert.py
 │   │   ├── ensure_http_url(value: str | HttpUrl) -> HttpUrl
@@ -66,6 +65,7 @@ src/domain/news
 │   │   ├── find_feed_by_id(feed_id: str) -> FeedItem | None
 │   │   └── search_feeds(query: FeedQuery) -> list[FeedItem]
 │   └── service.py
-│       └── ensure_http_url(value: str | HttpUrl) -> HttpUrl
+│       ├── ensure_http_url(value: str | HttpUrl) -> HttpUrl
+│       └── create_feed(url: str, title: str, status_code: int, pub_date: datetime) -> FeedItem
 └── rss.py 他
 ```
