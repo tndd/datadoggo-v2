@@ -1,8 +1,5 @@
-from sub import sub_fn
-
-
 def main():
-    print(sub_fn("Hello from datadoggo-v2!"))
+    print("Hi")
 
 
 if __name__ == "__main__":
