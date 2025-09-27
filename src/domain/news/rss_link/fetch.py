@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from xml.etree.ElementTree import Element
 
 import pytest
@@ -30,6 +31,7 @@ def fetch_rss_from_links(
     *,
     links_path: str | None = None,
     client: HttpsClient | None = None,
+    parallel: bool | int = False,
 ) -> list[Element]:
     """links.yml の定義から対象リンクを選び RSS を取得する"""
 
@@ -48,7 +50,49 @@ def fetch_rss_from_links(
                 f"指定したリンクが見つかりません: group={group}, name={name}"
             )
 
-    return [fetch_rss_element(item.url, client=client) for item in filtered]
+    worker_count = _normalize_parallel(parallel, len(filtered))
+    if worker_count <= 1:
+        return [fetch_rss_element(item.url, client=client) for item in filtered]
+
+    results: list[Element | None] = [None] * len(filtered)
+
+    def make_client() -> HttpsClient | None:
+        if client is None:
+            return None
+        return client.clone()
+
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        futures = {
+            executor.submit(
+                fetch_rss_element,
+                rss_item.url,
+                client=make_client(),
+            ): index
+            for index, rss_item in enumerate(filtered)
+        }
+
+        for future in as_completed(futures):
+            index = futures[future]
+            results[index] = future.result()
+
+    return [element for element in results if element is not None]
+
+
+def _normalize_parallel(parallel: bool | int, item_count: int) -> int:
+    """並列実行時のワーカー数を決定する"""
+
+    if not parallel:
+        return 1
+
+    if parallel is True:
+        return max(1, item_count)
+
+    if isinstance(parallel, int):
+        if parallel <= 1:
+            return 1
+        return min(parallel, item_count)
+
+    return 1
 
 
 class Tests:
@@ -136,10 +180,10 @@ class Tests:
             yaml_path = tmp_path / "links.yml"
             yaml_path.write_text(
                 """
-                sample:
-                headline: https://example.com/rss
-                latest: https://example.com/rss-2
-                """.strip(),
+sample:
+  headline: https://example.com/rss
+  latest: https://example.com/rss-2
+""".strip(),
                 encoding="utf-8",
             )
 
@@ -196,9 +240,9 @@ class Tests:
             yaml_path = tmp_path / "links.yml"
             yaml_path.write_text(
                 """
-                sample:
-                headline: https://example.com/rss
-                """.strip(),
+sample:
+  headline: https://example.com/rss
+""".strip(),
                 encoding="utf-8",
             )
 
@@ -218,10 +262,10 @@ class Tests:
             yaml_path = tmp_path / "links.yml"
             yaml_path.write_text(
                 """
-                sample:
-                headline: https://example.com/rss
-                latest: https://example.com/rss-2
-                """.strip(),
+sample:
+  headline: https://example.com/rss
+  latest: https://example.com/rss-2
+""".strip(),
                 encoding="utf-8",
             )
 
@@ -255,3 +299,73 @@ class Tests:
             element = roots[0]
             assert isinstance(element, Element)
             assert element.findtext("channel/title") == "OnlyLatest"
+
+        def test_fetch_rss_from_links_runs_in_parallel(self, tmp_path) -> None:
+            """
+            docs:
+                目的:
+                    parallel オプション指定時に並列取得が行われることを確認する。
+                検証観点:
+                    - 戻り値の順序が入力順に保たれる。
+                    - 実行スレッドが ThreadPoolExecutor のワーカーになる。
+            """
+
+            import threading
+            import time
+
+            yaml_path = tmp_path / "links.yml"
+            yaml_path.write_text(
+                """
+sample:
+  headline: https://example.com/rss
+  latest: https://example.com/rss-2
+""".strip(),
+                encoding="utf-8",
+            )
+
+            rss_payloads = {
+                "https://example.com/rss": (
+                    b"<rss version='2.0'><channel>"
+                    b"<title>SlowHeadline</title></channel></rss>"
+                ),
+                "https://example.com/rss-2": (
+                    b"<rss version='2.0'><channel>"
+                    b"<title>FastLatest</title></channel></rss>"
+                ),
+            }
+
+            thread_names: list[str] = []
+
+            def mock_fetcher(
+                method: str,
+                url: str,
+                headers: dict[str, str],
+                data: bytes | None,
+                timeout: float,
+            ) -> HttpResponse:
+                thread_names.append(threading.current_thread().name)
+                if url.endswith("/rss"):
+                    time.sleep(0.01)
+                return HttpResponse(
+                    url=url,
+                    method=method,
+                    status_code=HTTP_STATUS_OK,
+                    headers={},
+                    body=rss_payloads[url],
+                    encoding="utf-8",
+                )
+
+            client = HttpsClient(fetcher=mock_fetcher)
+
+            roots = fetch_rss_from_links(
+                "sample",
+                links_path=str(yaml_path),
+                client=client,
+                parallel=True,
+            )
+
+            assert [root.findtext("channel/title") for root in roots] == [
+                "SlowHeadline",
+                "FastLatest",
+            ]
+            assert all(name.startswith("ThreadPoolExecutor") for name in thread_names)
