@@ -18,19 +18,23 @@ URL取得状況の管理も行う。
 - 環境変数`FEED_DATABASE_URL`を設定すると接続先を切り替えられる。
 - テーブル初期化はアプリケーション起動時に`initialize_database()`で行う。
 
-## Bucket
-データの保存先を管理するテーブル。
+## RSS Bucket
+links.yml 由来の RSS フィードをバケットへ保存した際のメタデータを保持する。
 
-| name           | type       | description                    |
-| -------------- | ---------- | ------------------------------ |
-| id             | text(PK)   | sha256 hash                    |
-| created_at     | timestampz | 作成日時。デフォルトは現在時刻 |
-| updated_at     | timestampz | 更新日時。デフォルトは現在時刻 |
-| content_path   | text       | 記事が保存されているパス       |
-| content_digest | text       | 記事の内容のハッシュ           |
+| name           | type       | description                                      |
+| -------------- | ---------- | ------------------------------------------------ |
+| id             | text(PK)   | バケットキー (SHA256)。`save_rss_element_to_bucket` の戻り値 |
+| group          | text       | links.yml のグループ名                           |
+| name           | text       | links.yml のエントリ名                           |
+| url            | text       | RSS フィードの取得先 URL                         |
+| status         | text       | `RssBucketStatus`。`pending/registered/overridden/error` |
+| saved_at       | timestampz | 保存日時(UTC)                                     |
+| content_length | int?       | 保存した RSS XML のバイト長                       |
 
-**join元:**
-- Feed.id = Bucket.id
+**補足:**
+- デフォルトでは `sqlite:///data/datadoggo.db` に保存する。
+- 環境変数 `FEED_DATABASE_URL` で接続先を切り替え可能。
+- `store_rss_bucket_payload` がバケット保存とメタデータ upsert を同時に行う。
 
 # ドメインモデル
 
@@ -60,12 +64,17 @@ ArticleLinkにArticleContentをjoinしたもの。
 - ArtileLink -> ArticleContent
   - fetch_article_content(url: str) -> ArticleContent
   - store_article_content(article_content: ArticleContent) -> None
+- RSS バケットメタデータ
+  - store_rss_bucket_payload(rss_item: RssItem, element: Element) -> RssBucketItem
 
 ## データ取得
 - ArticleUrlStatus
   - search_article_url_status(query: ArticleUrlQuery) -> ArticleUrlStatus[list]
 - Article
   - search_article(query: ArticleQuery) -> Article[list]
+- RSS Bucket
+  - find_rss_bucket_by_id(bucket_id: str) -> RssBucketItem | None
+  - search_rss_buckets(query: RssBucketQuery) -> list[RssBucketItem]
 
 ## ワークフロー
 - feeds.ymlを元にArticleLinkを取得しDBに保存する
