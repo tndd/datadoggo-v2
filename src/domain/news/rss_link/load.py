@@ -1,19 +1,10 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
 from yaml import YAMLError, safe_load
 
 from src.infra.storage.file import load_file
 
-
-class RssItem(BaseModel):
-    """RSSリンクの単一エントリを表すモデル"""
-
-    model_config = ConfigDict(frozen=True)
-
-    group: str
-    name: str
-    url: str
+from .model import RssItem
 
 
 def load_rss_links(path: str = "./links.yml") -> list[RssItem]:

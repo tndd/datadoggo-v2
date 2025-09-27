@@ -10,7 +10,8 @@ import pytest
 from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
 from infra.parse import parse_rss
 
-from .load import RssItem, load_rss_links
+from .load import load_rss_links
+from .model import RssItem
 
 
 def fetch_rss_element(url: str, *, client: HttpsClient | None = None) -> Element:

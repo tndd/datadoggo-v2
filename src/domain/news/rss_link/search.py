@@ -167,7 +167,7 @@ class Tests:
             import os
 
             from .command import store_rss_bucket_payload
-            from .load import RssItem
+            from .model import RssItem
 
             element = Element("rss")
             rss_item = RssItem(
@@ -229,7 +229,7 @@ class Tests:
             import os
 
             from .command import store_rss_bucket_payload
-            from .load import RssItem
+            from .model import RssItem
 
             def make_element(url: str) -> Element:
                 element = Element("rss")

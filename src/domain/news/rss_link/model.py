@@ -11,6 +11,16 @@ from sqlmodel import Field as SQLField
 from sqlmodel import SQLModel
 
 
+class RssItem(BaseModel):
+    """links.ymlに定義されたRSSリンクのエントリ"""
+
+    model_config = ConfigDict(frozen=True)
+
+    group: str
+    name: str
+    url: str
+
+
 class RssBucketStatus(StrEnum):
     """RSSバケットエントリの状態"""
 

@@ -12,8 +12,7 @@ from infra.storage.bucket import DEFAULT_STORAGE_ROOT, load_object, save_object
 from infra.storage.rds import initialize_database, session_scope
 
 from .convert import record_to_rss_bucket, rss_bucket_to_record
-from .load import RssItem
-from .model import RssBucketItem, RssBucketStatus
+from .model import RssBucketItem, RssBucketStatus, RssItem
 from .service import create_rss_bucket_item
 
 

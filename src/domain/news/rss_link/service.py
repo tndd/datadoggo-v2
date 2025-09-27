@@ -3,14 +3,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
 
 from pydantic import HttpUrl, TypeAdapter
 
-from .model import RssBucketItem, RssBucketStatus
-
-if TYPE_CHECKING:
-    from .load import RssItem
+from .model import RssBucketItem, RssBucketStatus, RssItem
 
 _HTTP_URL_ADAPTER = TypeAdapter(HttpUrl)
 
@@ -41,7 +37,7 @@ def ensure_saved_at(value: datetime | None = None) -> datetime:
 def create_rss_bucket_item(
     *,
     bucket_key: str,
-    rss_item: "RssItem",
+    rss_item: RssItem,
     status: RssBucketStatus | str = RssBucketStatus.registered,
     saved_at: datetime | None = None,
     content_length: int | None = None,
@@ -75,7 +71,7 @@ class Tests:
                     - saved_at が timezone-aware になる。
             """
 
-            from .load import RssItem
+            from .model import RssItem
 
             item = create_rss_bucket_item(
                 bucket_key="abc",
@@ -101,7 +97,7 @@ class Tests:
 
             naive_time = datetime(2025, 9, 27, 12, 0, 0)
 
-            from .load import RssItem
+            from .model import RssItem
 
             item = create_rss_bucket_item(
                 bucket_key="def",
