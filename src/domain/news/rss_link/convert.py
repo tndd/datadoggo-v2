@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .model import RssBucketItem, RssBucketRecord, RssBucketStatus
-from .service import ensure_http_url
+from .service import ensure_http_url, ensure_saved_at
 
 
 def rss_bucket_to_record(item: RssBucketItem) -> RssBucketRecord:
@@ -29,13 +29,13 @@ def record_to_rss_bucket(record: RssBucketRecord) -> RssBucketItem:
         name=record.name,
         url=ensure_http_url(record.url),
         status=RssBucketStatus(record.status),
-        saved_at=record.saved_at,
+        saved_at=ensure_saved_at(record.saved_at),
         content_length=record.content_length,
     )
 
 
 class Tests:
-    class rss_bucket_to_record:
+    class Test_rss_bucket_to_record:
         def test_rss_bucket_to_record_preserves_fields(self) -> None:
             """
             docs:
@@ -72,7 +72,7 @@ class Tests:
             assert record.saved_at == item.saved_at
             assert record.content_length == content_length
 
-    class record_to_rss_bucket:
+    class Test_record_to_rss_bucket:
         def test_record_to_rss_bucket_restores_domain(self) -> None:
             """
             docs:

@@ -59,7 +59,7 @@ class RssBucketRecord(SQLModel, table=True):
 
 
 class Tests:
-    class RssBucketItemModel:
+    class Test_RssBucketItemModel:
         def test_rss_bucket_item_accepts_status_enum(self) -> None:
             """
             docs:

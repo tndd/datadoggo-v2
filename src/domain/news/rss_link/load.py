@@ -49,7 +49,7 @@ def load_rss_links(path: str = "./links.yml") -> list[RssItem]:
 
 
 class Tests:
-    class load_rss_links:
+    class Test_load_rss_links:
         def test_load_rss_links_reads_default_file(self) -> None:
             """
             docs:

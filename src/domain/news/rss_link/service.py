@@ -64,7 +64,7 @@ def create_rss_bucket_item(
 
 
 class Tests:
-    class create_rss_bucket_item:
+    class Test_create_rss_bucket_item:
         def test_create_rss_bucket_item_sets_defaults(self) -> None:
             """
             docs:

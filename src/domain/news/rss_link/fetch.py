@@ -96,7 +96,7 @@ def _normalize_parallel(parallel: bool | int, item_count: int) -> int:
 
 
 class Tests:
-    class fetch_rss_element:
+    class Test_fetch_rss_element:
         def test_fetch_rss_element_returns_rss_root(self) -> None:
             """
             docs:
@@ -165,7 +165,7 @@ class Tests:
             with pytest.raises(RuntimeError):
                 fetch_rss_element("https://example.com/rss", client=client)
 
-    class fetch_rss_from_links:
+    class Test_fetch_rss_from_links:
         def test_fetch_rss_from_links_returns_all_group_links(self, tmp_path) -> None:
             """
             docs:

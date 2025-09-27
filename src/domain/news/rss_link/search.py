@@ -58,7 +58,7 @@ def find_rss_content(
 
 
 class Tests:
-    class search_rss_keys:
+    class Test_search_rss_keys:
         def test_search_rss_keys_returns_matching_keys(self, tmp_path) -> None:
             """
             docs:
@@ -93,7 +93,7 @@ class Tests:
             missing = search_rss_keys(prefix="zz", storage_root=storage_root)
             assert missing == []
 
-    class find_rss_content:
+    class Test_find_rss_content:
         def test_find_rss_content_returns_text(self, tmp_path) -> None:
             """
             docs:
@@ -153,7 +153,7 @@ class Tests:
             )
             assert content == payload
 
-    class find_rss_bucket_by_id:
+    class Test_find_rss_bucket_by_id:
         def test_find_rss_bucket_by_id_returns_item(self, tmp_path) -> None:
             """
             docs:
@@ -215,7 +215,7 @@ class Tests:
             finally:
                 os.environ.pop("FEED_DATABASE_URL", None)
 
-    class search_rss_buckets:
+    class Test_search_rss_buckets:
         def test_search_rss_buckets_filters_and_orders(self, tmp_path) -> None:
             """
             docs:

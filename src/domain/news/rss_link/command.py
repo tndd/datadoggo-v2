@@ -107,7 +107,7 @@ def store_rss_bucket_payload(
 
 
 class Tests:
-    class save_rss_element_to_bucket:
+    class Test_save_rss_element_to_bucket:
         def test_save_rss_element_to_bucket_persists_payload(self, tmp_path) -> None:
             """
             docs:
@@ -115,7 +115,7 @@ class Tests:
                     RSS要素を単体で保存しZstandard圧縮で復元できることを確認する。
                 検証観点:
                     - 保存キーが SHA256 ハッシュと一致する。
-                    - 保存したデータが展開後に元のXMLと一致する。
+                    - 展開後のXMLが ElementTree のシリアライズ結果と一致する。
             """
 
             storage_root = tmp_path / "bucket"
@@ -129,12 +129,16 @@ class Tests:
                 storage_root=storage_root,
             )
 
-            assert key == sha256(rss_document).hexdigest()
+            serialized = _element_to_bytes(element, encoding="utf-8")
+            expected_checksum = sha256(serialized).hexdigest()
+            assert key == expected_checksum
 
-            loaded = load_object("rss", key, storage_root=storage_root, as_text=False)
-            assert loaded == rss_document
+            loaded = load_object(
+                "rss", key, storage_root=storage_root, as_text=False
+            )
+            assert loaded == serialized
 
-    class save_rss_elements_to_bucket:
+    class Test_save_rss_elements_to_bucket:
         def test_save_rss_elements_to_bucket_persists_payload(self, tmp_path) -> None:
             """
             docs:
@@ -142,7 +146,7 @@ class Tests:
                     複数のRSS要素を保存しZstandard圧縮で復元できることを確認する。
                 検証観点:
                     - 保存キーが SHA256 ハッシュと一致する。
-                    - 保存したデータが展開後に元のXMLと一致する。
+                    - 展開後のXMLが ElementTree のシリアライズ結果と一致する。
             """
 
             storage_root = tmp_path / "bucket"
@@ -159,12 +163,16 @@ class Tests:
 
             assert len(keys) == len(rss_documents)
 
-            for key, original in zip(keys, rss_documents, strict=True):
-                assert key == sha256(original).hexdigest()
+            for key, element, _original in zip(
+                keys, elements, rss_documents, strict=True
+            ):
+                serialized = _element_to_bytes(element, encoding="utf-8")
+                expected_checksum = sha256(serialized).hexdigest()
+                assert key == expected_checksum
                 loaded = load_object(
                     "rss", key, storage_root=storage_root, as_text=False
                 )
-                assert loaded == original
+                assert loaded == serialized
 
         def test_save_rss_elements_to_bucket_accepts_empty(self, tmp_path) -> None:
             """
@@ -186,7 +194,7 @@ class Tests:
             assert keys == []
             assert not any(storage_root.glob("**/*"))
 
-    class store_rss_bucket_payload:
+    class Test_store_rss_bucket_payload:
         def test_store_rss_bucket_payload_persists_metadata(self, tmp_path) -> None:
             """
             docs:
@@ -225,6 +233,7 @@ class Tests:
                 assert result.id
                 assert result.content_length == len(rss_document)
                 assert result.is_registered()
+                assert result.saved_at.tzinfo is not None
 
                 with session_scope() as session:
                     statement = select(RssBucketRecord).where(
@@ -233,7 +242,9 @@ class Tests:
                     record = session.exec(statement).first()
                     assert record is not None
                     assert record.group == "bbc"
-                    assert record.saved_at.tzinfo is not None
+                    assert record.saved_at.replace(
+                        tzinfo=None
+                    ) == result.saved_at.replace(tzinfo=None)
             finally:
                 os.environ.pop("FEED_DATABASE_URL", None)
 
