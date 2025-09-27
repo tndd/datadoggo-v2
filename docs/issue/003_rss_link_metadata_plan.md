@@ -16,8 +16,9 @@
 - 非対象: RSS 取得ロジック (`fetch.py`) の並列制御、`links.yml` の構造変更、外部 API 通信仕様の刷新。
 
 ## 想定仕様
-- テーブル名は `rss_bucket_item`。主キーはバケットの SHA256 キー (`id`) とする。
-- フィールド案: `id`, `group`, `name`, `url`, `status`, `saved_at`, `object_key`, `content_hash` (冗長だが外部キー用途), `content_length` (任意)。
+- テーブル名は `rss_bucket`。主キーはバケットの SHA256 キー (`id`) とする。
+- フィールド案: `id`, `group`, `name`, `url`, `status`, `saved_at`, `content_length` (任意)。
+- `id` は `save_rss_element_to_bucket` で得られるバケットキーと同一であり、追加の `object_key` や `content_hash` は保持しない。
 - ステータスは StrEnum `RssBucketStatus` で管理し、`pending`(旧UNDO), `registered`, `overridden`, `error` を提供する。
 - `saved_at` は UTC の timezone-aware datetime を保持し、`create_rss_bucket_item` で自動付与。
 - `command` 層はバケット保存とメタデータ保存を一貫処理し、保存失敗時はロールバック/ステータス更新を行う。
@@ -42,7 +43,7 @@
    - バケット保存とメタデータ保存が同期して行われること、エラー時に status が `error` になることを検証。
    - docs 形式コメントで目的と検証観点を記載。
 6. **ドキュメント更新**
-   - `docs/design.md` のテーブル定義に `rss_bucket_item` を追記し、データフロー図を更新。
+   - `docs/design.md` のテーブル定義に `rss_bucket` を追記し、データフロー図を更新。
    - 新 API やステータス遷移の説明を加筆。
 7. **検証**
    - `uv run ruff check` → `uv run pyright` → `uv run pytest` を実行し、警告も含めて解消。
@@ -60,7 +61,7 @@
 - ステータス遷移の定義が曖昧なままだと利用側の期待が一致しない可能性。ワークフロー定義を合わせて整理する必要。
 
 ## 完了条件
-- `RssBucketItem`/`RssBucketRecord`/`RssBucketStatus` が実装され、`rss_bucket_item` テーブルが初期化される。
+- `RssBucketItem`/`RssBucketRecord`/`RssBucketStatus` が実装され、`rss_bucket` テーブルが初期化される。
 - バケット保存 API がメタデータ保存と一貫して動作し、検索 API から参照できる。
 - 追加したテストが全て成功し、`ruff`/`pyright`/`pytest` がグリーンである。
 - `docs/design.md` に新テーブルとデータフローが明記されている。
