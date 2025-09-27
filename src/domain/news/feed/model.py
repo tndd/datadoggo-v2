@@ -33,7 +33,7 @@ class FeedItem(BaseModel):
 class FeedRecord(SQLModel, table=True):
     """SQLModelによるFeedテーブル定義"""
 
-    __tablename__: ClassVar[Any] = "feeds"
+    __tablename__: ClassVar[Any] = "feed_item"
 
     id: str = SQLField(primary_key=True, index=True)
     url: str = SQLField(nullable=False)
