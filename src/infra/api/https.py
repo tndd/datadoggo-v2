@@ -55,6 +55,8 @@ class HttpsClient:
         default_encoding: str = DEFAULT_ENCODING,
         user_agent: str = DEFAULT_USER_AGENT,
     ) -> None:
+        self._user_agent = user_agent
+        self._is_custom_fetcher = fetcher is not None
         self._fetcher = fetcher or self._default_fetcher(user_agent=user_agent)
         self._default_timeout = default_timeout
         self._default_encoding = default_encoding
@@ -94,6 +96,21 @@ class HttpsClient:
             headers=request_headers,
             data=payload,
             timeout=timeout,
+        )
+
+    def clone(self) -> "HttpsClient":
+        """同一設定を持つ新しい HttpsClient を生成する"""
+
+        if self._is_custom_fetcher:
+            fetcher = self._fetcher
+        else:
+            fetcher = self._default_fetcher(user_agent=self._user_agent)
+
+        return HttpsClient(
+            fetcher=fetcher,
+            default_timeout=self._default_timeout,
+            default_encoding=self._default_encoding,
+            user_agent=self._user_agent,
         )
 
     def _request(
@@ -304,6 +321,46 @@ class Tests:
         assert body == payload
         assert headers["Content-Type"] == "application/json"
         assert response.text() == "done"
+
+    def test_clone_creates_equivalent_client(self) -> None:
+        """
+        docs:
+            目的:
+                clone が同一設定の新しいクライアントを生成することを確認する。
+            検証観点:
+                - 取得先URLごとに同じフェッチャーが呼び出される。
+                - タイムアウト設定が複製される。
+        """
+
+        fetcher = RecordingFetcher(
+            response_text="ok",
+            encoding="utf-8",
+        )
+        client = HttpsClient(fetcher=fetcher, default_timeout=2.5)
+
+        clone = client.clone()
+
+        assert clone is not client
+
+        client.get("https://example.com/a")
+        clone.get("https://example.com/b")
+
+        assert fetcher.calls == [
+            (
+                "GET",
+                "https://example.com/a",
+                {},
+                None,
+                2.5,
+            ),
+            (
+                "GET",
+                "https://example.com/b",
+                {},
+                None,
+                2.5,
+            ),
+        ]
 
     def test_request_raises_runtime_error_on_fetch_failure(self) -> None:
         """
