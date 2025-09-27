@@ -9,7 +9,7 @@ from yaml import YAMLError, safe_load
 from src.infra.storage.file import load_file
 
 from ..common import ensure_http_url, ensure_saved_at
-from .model import RssBucketItem, RssBucketRecord, RssBucketStatus, RssItem
+from .model import RssBucket, RssBucketRecord, RssBucketStatus, RssItem
 
 
 def load_rss_links(path: str = "./links.yml") -> list[RssItem]:
@@ -44,7 +44,7 @@ def load_rss_links(path: str = "./links.yml") -> list[RssItem]:
     return links
 
 
-def rss_bucket_to_record(item: RssBucketItem) -> RssBucketRecord:
+def rss_bucket_to_record(item: RssBucket) -> RssBucketRecord:
     """ドメインモデルを永続化レコードに変換する"""
 
     return RssBucketRecord(
@@ -58,10 +58,10 @@ def rss_bucket_to_record(item: RssBucketItem) -> RssBucketRecord:
     )
 
 
-def record_to_rss_bucket(record: RssBucketRecord) -> RssBucketItem:
+def record_to_rss_bucket(record: RssBucketRecord) -> RssBucket:
     """永続化レコードをドメインモデルに変換する"""
 
-    return RssBucketItem(
+    return RssBucket(
         id=record.id,
         group=record.group,
         name=record.name,
@@ -87,14 +87,14 @@ def create_rss_bucket_item(
     status: RssBucketStatus | str = RssBucketStatus.registered,
     saved_at: datetime | None = None,
     content_length: int | None = None,
-) -> RssBucketItem:
+) -> RssBucket:
     """RSSバケットエントリのドメインモデルを組み立てる"""
 
     normalized_url = ensure_http_url(rss_item.url)
     normalized_status = ensure_rss_bucket_status(status)
     normalized_saved_at = ensure_saved_at(saved_at)
 
-    return RssBucketItem(
+    return RssBucket(
         id=bucket_key,
         group=rss_item.group,
         name=rss_item.name,
@@ -163,7 +163,7 @@ class Tests:
 
             url_value = cast(HttpUrl, "https://example.com/rss")
 
-            item = RssBucketItem(
+            item = RssBucket(
                 id="abc",
                 group="bbc",
                 name="top",

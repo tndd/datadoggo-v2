@@ -30,7 +30,7 @@ class RssBucketStatus(StrEnum):
     error = "error"
 
 
-class RssBucketItem(BaseModel):
+class RssBucket(BaseModel):
     """RSSバケットに保存された要素のドメイン表現"""
 
     model_config = ConfigDict(frozen=True)
@@ -86,7 +86,7 @@ class Tests:
 
             from pydantic import HttpUrl
 
-            item = RssBucketItem(
+            item = RssBucket(
                 id="abc",
                 group="bbc",
                 name="top",

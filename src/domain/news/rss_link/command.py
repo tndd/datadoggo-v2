@@ -11,7 +11,7 @@ from infra.parse import parse_rss
 from infra.storage.bucket import DEFAULT_STORAGE_ROOT, load_object, save_object
 from infra.storage.rds import initialize_database, session_scope
 
-from .model import RssBucketItem, RssBucketStatus, RssItem
+from .model import RssBucket, RssBucketStatus, RssItem
 from .service import (
     create_rss_bucket_item,
     record_to_rss_bucket,
@@ -77,7 +77,7 @@ def store_rss_bucket_payload(
     bucket_name: str = "rss",
     storage_root: str | Path = DEFAULT_STORAGE_ROOT,
     status: RssBucketStatus | str = RssBucketStatus.registered,
-) -> RssBucketItem:
+) -> RssBucket:
     """バケット保存とメタデータ永続化を一貫処理する"""
 
     encoding = "utf-8"

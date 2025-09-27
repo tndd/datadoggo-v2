@@ -19,7 +19,7 @@ from infra.storage.bucket import (
 )
 from infra.storage.rds import initialize_database, session_scope
 
-from .model import RssBucketItem, RssBucketRecord, RssBucketStatus
+from .model import RssBucket, RssBucketRecord, RssBucketStatus
 from .service import record_to_rss_bucket
 
 
@@ -251,7 +251,7 @@ class Tests:
                     ),
                 ]
 
-                stored_records: list[RssBucketItem] = []
+                stored_records: list[RssBucket] = []
                 for rss_item in items:
                     stored_records.append(
                         store_rss_bucket_payload(
@@ -295,7 +295,7 @@ class RssBucketQuery(BaseModel):
     saved_at_to: datetime | None = None
 
 
-def find_rss_bucket_by_id(bucket_id: str) -> RssBucketItem | None:
+def find_rss_bucket_by_id(bucket_id: str) -> RssBucket | None:
     """IDでRSSバケットエントリを検索する"""
 
     initialize_database()
@@ -308,7 +308,7 @@ def find_rss_bucket_by_id(bucket_id: str) -> RssBucketItem | None:
         return record_to_rss_bucket(record)
 
 
-def search_rss_buckets(query: RssBucketQuery) -> list[RssBucketItem]:
+def search_rss_buckets(query: RssBucketQuery) -> list[RssBucket]:
     """RSSバケットエントリを検索する"""
 
     initialize_database()
