@@ -9,6 +9,8 @@ from pydantic import BaseModel, HttpUrl
 from sqlmodel import Field as SQLField
 from sqlmodel import SQLModel
 
+SUCCESS_STATUS_CODE = 200
+
 
 class FeedItem(BaseModel):
     """Feedテーブルの要素のドメイン表現"""
@@ -18,6 +20,14 @@ class FeedItem(BaseModel):
     title: str
     status_code: int | None = None
     pub_date: datetime
+
+    def is_success(self) -> bool:
+        """成功通信を表す"""
+        return self.status_code == SUCCESS_STATUS_CODE
+
+    def is_backlog(self) -> bool:
+        """通信未実行または通信失敗を表す"""
+        return self.status_code is not SUCCESS_STATUS_CODE
 
 
 class FeedRecord(SQLModel, table=True):
