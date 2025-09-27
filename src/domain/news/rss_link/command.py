@@ -75,8 +75,7 @@ class Tests:
 
             storage_root = tmp_path / "bucket"
             rss_document = (
-                b"<rss version='2.0'><channel>"
-                b"<title>Alpha</title></channel></rss>"
+                b"<rss version='2.0'><channel><title>Alpha</title></channel></rss>"
             )
             element = parse_rss(rss_document)
 
