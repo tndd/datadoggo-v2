@@ -70,11 +70,10 @@
 ```
 src/domain/news/rss_link
 ├── command.py          # store_rss_bucket_payload, save_rss_element_to_bucket
-├── convert.py          # rss_bucket_to_record, record_to_rss_bucket
 ├── model.py            # RssBucketStatus, RssBucketItem, RssBucketRecord
 ├── search.py           # find_rss_bucket_by_id, search_rss_buckets, search_rss_keys
-├── service.py          # create_rss_bucket_item, ensure_http_url 等
+├── service.py          # load_rss_links, rss_bucket_to_record, record_to_rss_bucket
+│                       # create_rss_bucket_item, ensure_rss_bucket_status 等
 ├── fetch.py
-├── load.py
 └── __init__.py
 ```

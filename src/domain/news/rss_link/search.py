@@ -19,8 +19,8 @@ from infra.storage.bucket import (
 )
 from infra.storage.rds import initialize_database, session_scope
 
-from .convert import record_to_rss_bucket
 from .model import RssBucketItem, RssBucketRecord, RssBucketStatus
+from .service import record_to_rss_bucket
 
 
 def search_rss_keys(
