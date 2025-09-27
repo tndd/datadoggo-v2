@@ -12,8 +12,8 @@ from sqlmodel import select
 
 from infra.storage.rds import initialize_database, session_scope
 
-from .convert import record_to_feed
 from .model import FeedItem, FeedRecord
+from .service import record_to_feed
 
 
 class FeedQuery(BaseModel):

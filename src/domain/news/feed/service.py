@@ -14,7 +14,7 @@ from infra.compute import hash_text_sha256
 from infra.parse import parse_rss
 
 from ..common import ensure_http_url
-from .model import FeedItem
+from .model import FeedItem, FeedRecord
 
 DEFAULT_FEED_STATUS_CODE = None
 
@@ -34,6 +34,30 @@ def create_feed(
         title=title,
         status_code=status_code,
         pub_date=pub_date,
+    )
+
+
+def feed_to_record(feed: FeedItem) -> FeedRecord:
+    """Feedドメインモデルを永続化レコードへ変換する"""
+
+    return FeedRecord(
+        id=feed.id,
+        url=str(feed.url),
+        title=feed.title,
+        status_code=feed.status_code,
+        pub_date=feed.pub_date,
+    )
+
+
+def record_to_feed(record: FeedRecord) -> FeedItem:
+    """永続化レコードをFeedドメインモデルに変換する"""
+
+    return FeedItem(
+        id=record.id,
+        url=ensure_http_url(record.url),
+        title=record.title,
+        status_code=record.status_code,
+        pub_date=record.pub_date,
     )
 
 
