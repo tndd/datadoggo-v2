@@ -1,4 +1,4 @@
-"""RSSフィードを取得して解析するユーティリティ"""
+# リンク経由で外部通信してコンテンツを取得
 
 from __future__ import annotations
 
