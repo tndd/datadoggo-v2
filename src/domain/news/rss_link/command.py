@@ -132,9 +132,7 @@ class Tests:
             expected_checksum = sha256(serialized).hexdigest()
             assert key == expected_checksum
 
-            loaded = load_object(
-                "rss", key, storage_root=storage_root, as_text=False
-            )
+            loaded = load_object("rss", key, storage_root=storage_root, as_text=False)
             assert loaded == serialized
 
     class Test_save_rss_elements_to_bucket:
