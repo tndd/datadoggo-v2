@@ -291,7 +291,7 @@ class Tests:
         fetcher = RecordingFetcher(response_text="done")
         client = HttpsClient(fetcher=fetcher)
 
-        payload = b"{\"key\": \"value\"}"
+        payload = b'{"key": "value"}'
         response = client.post(
             "https://example.com/json",
             data=payload,
