@@ -22,6 +22,7 @@ DEFAULT_FEED_STATUS_CODE = None
 def create_feed(
     url: str,
     title: str,
+    bucket_id: str,
     status_code: int | None,
     pub_date: datetime,
 ) -> FeedItem:
@@ -32,6 +33,7 @@ def create_feed(
         id=feed_id,
         url=ensure_http_url(url),
         title=title,
+        bucket_id=bucket_id,
         status_code=status_code,
         pub_date=pub_date,
     )
@@ -46,6 +48,7 @@ def feed_to_record(feed: FeedItem) -> FeedRecord:
         title=feed.title,
         status_code=feed.status_code,
         pub_date=feed.pub_date,
+        bucket_id=feed.bucket_id,
     )
 
 
@@ -58,12 +61,14 @@ def record_to_feed(record: FeedRecord) -> FeedItem:
         title=record.title,
         status_code=record.status_code,
         pub_date=record.pub_date,
+        bucket_id=record.bucket_id,
     )
 
 
 def convert_rss_items_to_feed_items(
     root: Element,
     *,
+    bucket_id: str,
     default_status_code: int | None = DEFAULT_FEED_STATUS_CODE,
 ) -> list[FeedItem]:
     """RSSのitem要素をFeedItemリストに変換する"""
@@ -88,6 +93,7 @@ def convert_rss_items_to_feed_items(
                 create_feed(
                     url=link,
                     title=title,
+                    bucket_id=bucket_id,
                     status_code=default_status_code,
                     pub_date=pub_date,
                 )
@@ -168,13 +174,14 @@ class Tests:
             検証観点:
                 - item要素からFeedItemが生成される。
                 - pubDateがUTCのdatetimeに変換される。
+                - bucket_id が指定値で保持される。
         """
 
         fixture_path = Path(__file__).resolve().parents[4] / "mock" / "google_news.rss"
         content = fixture_path.read_bytes()
         root = parse_rss(content)
 
-        items = convert_rss_items_to_feed_items(root)
+        items = convert_rss_items_to_feed_items(root, bucket_id="rss-bucket-1")
 
         assert items, "FeedItemが1件以上生成されること"
         first = items[0]
@@ -183,6 +190,7 @@ class Tests:
         expected_datetime = datetime(2025, 9, 24, 11, 52, 38, tzinfo=timezone.utc)
         assert first.pub_date == expected_datetime
         assert first.status_code is DEFAULT_FEED_STATUS_CODE
+        assert first.bucket_id == "rss-bucket-1"
 
     def test_convert_rss_items_to_feed_items_skips_incomplete_item(self) -> None:
         """
@@ -211,7 +219,7 @@ class Tests:
         """
         root = parse_rss(rss_xml)
 
-        items = convert_rss_items_to_feed_items(root)
+        items = convert_rss_items_to_feed_items(root, bucket_id="rss-bucket-2")
 
         assert len(items) == 1
         assert str(items[0].url) == "https://example.com/valid"
@@ -229,4 +237,4 @@ class Tests:
         root = ET.fromstring("<rss version='2.0'></rss>")
 
         with pytest.raises(ValueError):
-            convert_rss_items_to_feed_items(root)
+            convert_rss_items_to_feed_items(root, bucket_id="rss-bucket-3")

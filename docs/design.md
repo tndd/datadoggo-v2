@@ -8,6 +8,7 @@ URL取得状況の管理も行う。
 | name        | type       | description                                   |
 | ----------- | ---------- | --------------------------------------------- |
 | id          | text(PK)   | URLのhash。Bucket.idとjoinされる              |
+| bucket_id   | text       | 元となったRssBucketのID                        |
 | url         | text       | 記事のURL                                     |
 | title       | text       | 記事のタイトル                                |
 | status_code | int?       | HTTPステータスコード                          |

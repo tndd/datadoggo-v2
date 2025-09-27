@@ -18,8 +18,9 @@ class FeedItem(BaseModel):
     id: str
     url: HttpUrl
     title: str
-    status_code: int | None = None
     pub_date: datetime
+    bucket_id: str
+    status_code: int | None = None
 
     def is_success(self) -> bool:
         """成功通信を表す"""
@@ -40,3 +41,4 @@ class FeedRecord(SQLModel, table=True):
     title: str = SQLField(nullable=False)
     status_code: int | None = SQLField(default=None, nullable=True)
     pub_date: datetime = SQLField(nullable=False)
+    bucket_id: str = SQLField(nullable=False, index=True)

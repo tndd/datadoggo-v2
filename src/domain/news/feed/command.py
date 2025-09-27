@@ -37,6 +37,7 @@ class Tests:
             検証観点:
                 - create_feed で生成した FeedItem が store_feed で保存される。
                 - 保存後に同一IDのレコードがDB上に存在する。
+                - bucket_id が保存時の値で保持される。
         """
 
         db_path = tmp_path / "command" / "persist.db"
@@ -45,6 +46,7 @@ class Tests:
             feed = create_feed(
                 url="https://example.com/store",
                 title="Store Feed",
+                bucket_id="bucket-store",
                 status_code=201,
                 pub_date=datetime(2024, 1, 1, 9, 0, 0),
             )
@@ -52,12 +54,14 @@ class Tests:
             stored = store_feed(feed)
             assert stored.id == feed.id
             assert stored.status_code == feed.status_code
+            assert stored.bucket_id == "bucket-store"
 
             with session_scope() as session:
                 statement = select(FeedRecord).where(FeedRecord.id == feed.id)
                 record = session.exec(statement).first()
                 assert record is not None
                 assert record.title == "Store Feed"
+                assert record.bucket_id == "bucket-store"
         finally:
             os.environ.pop("FEED_DATABASE_URL", None)
 
@@ -81,6 +85,7 @@ class Tests:
             feed = create_feed(
                 url="https://example.com/new",
                 title="New Entry",
+                bucket_id="bucket-new",
                 status_code=200,
                 pub_date=datetime(2024, 1, 15, 9, 0, 0),
             )
