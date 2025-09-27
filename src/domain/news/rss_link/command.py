@@ -11,6 +11,26 @@ from infra.parse import parse_rss
 from infra.storage.bucket import DEFAULT_STORAGE_ROOT, load_object, save_object
 
 
+def save_rss_element_to_bucket(
+    element: Element,
+    *,
+    bucket_name: str = "rss",
+    storage_root: str | Path = DEFAULT_STORAGE_ROOT,
+    encoding: str = "utf-8",
+) -> str:
+    """RSS要素を単体で保存しキーを返す"""
+
+    payload = _element_to_bytes(element, encoding=encoding)
+    checksum = sha256(payload).hexdigest()
+    return save_object(
+        payload,
+        bucket_name=bucket_name,
+        object_key=checksum,
+        storage_root=storage_root,
+        encoding=encoding,
+    )
+
+
 def save_rss_elements_to_bucket(
     elements: Sequence[Element],
     *,
@@ -18,17 +38,14 @@ def save_rss_elements_to_bucket(
     storage_root: str | Path = DEFAULT_STORAGE_ROOT,
     encoding: str = "utf-8",
 ) -> list[str]:
-    """RSS要素をZstandard圧縮で保存しキー一覧を返す"""
+    """RSS要素のシーケンスを保存しキー一覧を返す"""
 
     saved_keys: list[str] = []
 
     for element in elements:
-        payload = _element_to_bytes(element, encoding=encoding)
-        checksum = sha256(payload).hexdigest()
-        key = save_object(
-            payload,
+        key = save_rss_element_to_bucket(
+            element,
             bucket_name=bucket_name,
-            object_key=checksum,
             storage_root=storage_root,
             encoding=encoding,
         )
@@ -45,12 +62,40 @@ def _element_to_bytes(element: Element, *, encoding: str) -> bytes:
 
 
 class Tests:
+    class save_rss_element_to_bucket:
+        def test_save_rss_element_to_bucket_persists_payload(self, tmp_path) -> None:
+            """
+            docs:
+                目的:
+                    RSS要素を単体で保存しZstandard圧縮で復元できることを確認する。
+                検証観点:
+                    - 保存キーが SHA256 ハッシュと一致する。
+                    - 保存したデータが展開後に元のXMLと一致する。
+            """
+
+            storage_root = tmp_path / "bucket"
+            rss_document = (
+                b"<rss version='2.0'><channel>"
+                b"<title>Alpha</title></channel></rss>"
+            )
+            element = parse_rss(rss_document)
+
+            key = save_rss_element_to_bucket(
+                element,
+                storage_root=storage_root,
+            )
+
+            assert key == sha256(rss_document).hexdigest()
+
+            loaded = load_object("rss", key, storage_root=storage_root, as_text=False)
+            assert loaded == rss_document
+
     class save_rss_elements_to_bucket:
         def test_save_rss_elements_to_bucket_persists_payload(self, tmp_path) -> None:
             """
             docs:
                 目的:
-                    RSS要素をバケットへ保存しZstandard圧縮で復元できることを確認する。
+                    複数のRSS要素を保存しZstandard圧縮で復元できることを確認する。
                 検証観点:
                     - 保存キーが SHA256 ハッシュと一致する。
                     - 保存したデータが展開後に元のXMLと一致する。
