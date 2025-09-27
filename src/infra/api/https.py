@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from typing import Any
 from urllib.error import URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 import pytest
+from pydantic import BaseModel, ConfigDict
 
 DEFAULT_TIMEOUT = 10.0
 DEFAULT_ENCODING = "utf-8"
@@ -19,9 +20,10 @@ HTTP_STATUS_OK = 200
 RequestData = bytes | str | Mapping[str, str | Sequence[str]] | None
 
 
-@dataclass(frozen=True)
-class HttpResponse:
+class HttpResponse(BaseModel):
     """HTTPレスポンスを表現するオブジェクト"""
+
+    model_config = ConfigDict(frozen=True)
 
     url: str
     method: str
@@ -113,7 +115,7 @@ class HttpsClient:
             raise RuntimeError("HTTPリクエストに失敗しました") from exc
 
         if response.encoding is None:
-            response = replace(response, encoding=self._default_encoding)
+            response = response.model_copy(update={"encoding": self._default_encoding})
 
         return response
 
