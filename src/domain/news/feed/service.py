@@ -9,22 +9,14 @@ from xml.etree import ElementTree as ET
 from xml.etree.ElementTree import Element
 
 import pytest
-from pydantic import HttpUrl, TypeAdapter
 
 from infra.compute import hash_text_sha256
 from infra.parse import parse_rss
 
+from ..common import ensure_http_url
 from .model import FeedItem
 
-HTTP_URL_ADAPTER = TypeAdapter(HttpUrl)
 DEFAULT_FEED_STATUS_CODE = None
-
-
-def ensure_http_url(value: str | HttpUrl) -> HttpUrl:
-    """文字列/HttpUrl入力をHttpUrlとして検証する"""
-
-    return HTTP_URL_ADAPTER.validate_python(value)
-
 
 def create_feed(
     url: str,

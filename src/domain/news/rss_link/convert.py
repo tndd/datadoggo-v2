@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from ..common import ensure_http_url, ensure_saved_at
 from .model import RssBucketItem, RssBucketRecord, RssBucketStatus
-from .service import ensure_http_url, ensure_saved_at
 
 
 def rss_bucket_to_record(item: RssBucketItem) -> RssBucketRecord:

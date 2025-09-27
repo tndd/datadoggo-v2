@@ -2,19 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 
-from pydantic import HttpUrl, TypeAdapter
-
+from ..common import ensure_http_url, ensure_saved_at
 from .model import RssBucketItem, RssBucketStatus, RssItem
-
-_HTTP_URL_ADAPTER = TypeAdapter(HttpUrl)
-
-
-def ensure_http_url(value: str | HttpUrl) -> HttpUrl:
-    """文字列/HttpUrl入力をHttpUrlとして検証する"""
-
-    return _HTTP_URL_ADAPTER.validate_python(value)
 
 
 def ensure_rss_bucket_status(value: RssBucketStatus | str) -> RssBucketStatus:
@@ -23,15 +14,6 @@ def ensure_rss_bucket_status(value: RssBucketStatus | str) -> RssBucketStatus:
     if isinstance(value, RssBucketStatus):
         return value
     return RssBucketStatus(value)
-
-
-def ensure_saved_at(value: datetime | None = None) -> datetime:
-    """保存日時をUTCのtimezone-aware datetimeへ整形する"""
-
-    target = value or datetime.now(timezone.utc)
-    if target.tzinfo is None:
-        return target.replace(tzinfo=timezone.utc)
-    return target.astimezone(timezone.utc)
 
 
 def create_rss_bucket_item(
