@@ -18,6 +18,7 @@ from .model import FeedItem
 
 DEFAULT_FEED_STATUS_CODE = None
 
+
 def create_feed(
     url: str,
     title: str,
