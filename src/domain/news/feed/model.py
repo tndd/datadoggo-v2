@@ -16,7 +16,7 @@ class FeedItem(BaseModel):
     id: str
     url: HttpUrl
     title: str
-    status_code: int
+    status_code: int | None = None
     pub_date: datetime
 
 
@@ -28,5 +28,5 @@ class FeedRecord(SQLModel, table=True):
     id: str = SQLField(primary_key=True, index=True)
     url: str = SQLField(nullable=False)
     title: str = SQLField(nullable=False)
-    status_code: int = SQLField(nullable=False)
+    status_code: int | None = SQLField(default=None, nullable=True)
     pub_date: datetime = SQLField(nullable=False)
