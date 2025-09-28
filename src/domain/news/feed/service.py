@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
@@ -12,12 +13,14 @@ import pytest
 from pydantic import ValidationError
 
 from infra.compute import hash_text_sha256
+from infra.logging import get_logger
 from infra.parse import parse_rss
 
 from ..common import ensure_http_url
 from .model import FeedItem, FeedRecord
 
 DEFAULT_FEED_STATUS_CODE = None
+_log = get_logger()
 
 
 def create_feed(
@@ -99,7 +102,15 @@ def convert_rss_items_to_feed_items(
                     pub_date=pub_date,
                 )
             )
-        except (ValueError, ValidationError):
+        except (ValueError, ValidationError) as exc:
+            _log.warning(
+                "invalid feed item skipped",
+                bucket_id=bucket_id,
+                feed_url=link,
+                error_type=type(exc).__name__,
+                exception_message=str(exc),
+                feed_title=title,
+            )
             continue
 
     return feed_items
@@ -261,6 +272,48 @@ class Tests:
         assert first.title == "Valid URL"
         assert str(first.url) == "https://example.com/article"
         assert first.bucket_id == "rss-bucket-4"
+
+    def test_convert_rss_items_to_feed_items_logs_invalid_http_url(
+        self,
+        app_logging,
+    ) -> None:
+        """
+        docs:
+            目的:
+                不正URLを含むitemをスキップした際にログへ詳細が出力されることを確認する。
+            検証観点:
+                - ログファイルが生成され、メッセージがJSONで出力される。
+                - ログのextraにbucket_idとfeed_urlが含まれる。
+        """
+
+        rss_xml = """
+            <rss version="2.0">
+                <channel>
+                    <item>
+                        <title>Broken</title>
+                        <link>notaurl</link>
+                        <pubDate>Sat, 27 Sep 2025 15:30:00 GMT</pubDate>
+                    </item>
+                </channel>
+            </rss>
+        """
+        root = parse_rss(rss_xml)
+
+        items = convert_rss_items_to_feed_items(root, bucket_id="rss-bucket-5")
+
+        assert not items
+
+        log_path = app_logging
+        assert log_path.exists()
+
+        log_lines = [line for line in log_path.read_text().splitlines() if line.strip()]
+        assert log_lines, "ログが1行以上出力されること"
+        payload = json.loads(log_lines[-1])
+        record = payload["record"]
+        assert record["message"] == "invalid feed item skipped"
+        extra = record["extra"]
+        assert extra["bucket_id"] == "rss-bucket-5"
+        assert extra["feed_url"] == "notaurl"
 
     def test_convert_rss_items_to_feed_items_raises_without_channel(self) -> None:
         """

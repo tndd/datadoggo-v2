@@ -16,12 +16,15 @@ from src.infra.compute import (
     generate_timestamp,
     sanitize_storage_key,
 )
+from src.infra.logging import get_logger
 from src.infra.storage.file import load_bytes, save_bytes_to_file
 
 DEFAULT_STORAGE_ROOT = Path("data/bucket")
 DEFAULT_OBJECT_EXTENSION = ".zst"
 SHARD_PREFIX_LENGTH = 2
 MAX_SAFE_KEY_LENGTH = DEFAULT_MAX_STORAGE_KEY_LENGTH
+
+_log = get_logger()
 
 
 def save_object(
@@ -42,10 +45,21 @@ def save_object(
 
         payload_bytes = _to_compressed_bytes(payload, encoding=encoding)
         save_bytes_to_file(payload_bytes, target_path)
-        print(f"\nオブジェクトを {target_path} に保存しました。")
+        _log.info(
+            "オブジェクトを保存しました",
+            bucket=bucket_name,
+            object_key=resolved_key,
+            path=str(target_path),
+            bytes=len(payload_bytes),
+        )
         return resolved_key
     except Exception as error:
-        print(f"オブジェクト保存エラー: {error}")
+        _log.exception(
+            "オブジェクトの保存に失敗しました",
+            bucket=bucket_name,
+            object_key=object_key,
+            error=str(error),
+        )
         return ""
 
 
@@ -65,18 +79,48 @@ def load_object(
         )
 
         if not target_path.exists():
-            print(f"オブジェクトが見つかりません: {target_path}")
+            _log.warning(
+                "オブジェクトが見つかりません",
+                bucket=bucket_name,
+                object_key=object_key,
+                path=str(target_path),
+            )
             return "" if as_text else b""
 
         compressed_data = load_bytes(target_path)
         if not compressed_data:
+            _log.warning(
+                "圧縮データが空のため読み込みに失敗しました",
+                bucket=bucket_name,
+                object_key=object_key,
+            )
             return "" if as_text else b""
 
         if as_text:
-            return decompress_zstd_to_text(compressed_data, encoding=encoding)
-        return decompress_zstd_to_bytes(compressed_data)
+            result = decompress_zstd_to_text(compressed_data, encoding=encoding)
+            text_bytes = len(result.encode(encoding))
+            _log.info(
+                "テキストオブジェクトを読み込みました",
+                bucket=bucket_name,
+                object_key=object_key,
+                bytes=text_bytes,
+            )
+            return result
+        result_bytes = decompress_zstd_to_bytes(compressed_data)
+        _log.info(
+            "バイナリオブジェクトを読み込みました",
+            bucket=bucket_name,
+            object_key=object_key,
+            bytes=len(result_bytes),
+        )
+        return result_bytes
     except Exception as error:
-        print(f"オブジェクト読み込みエラー: {error}")
+        _log.exception(
+            "オブジェクトの読み込みに失敗しました",
+            bucket=bucket_name,
+            object_key=object_key,
+            error=str(error),
+        )
         return "" if as_text else b""
 
 
@@ -103,7 +147,12 @@ def search_object_keys(
             keys.append(key)
         return keys
     except Exception as error:
-        print(f"オブジェクト検索エラー: {error}")
+        _log.exception(
+            "オブジェクトキーの検索に失敗しました",
+            bucket=bucket_name,
+            prefix=prefix,
+            error=str(error),
+        )
         return []
 
 

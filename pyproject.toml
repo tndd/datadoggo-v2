@@ -16,6 +16,7 @@ dependencies = [
     "moto[s3]>=5.1.13",
     "sqlmodel>=0.0.25",
     "pyyaml>=6.0.2",
+    "loguru>=0.7.3",
 ]
 
 [tool.setuptools.packages.find]

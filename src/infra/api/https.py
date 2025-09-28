@@ -12,6 +12,8 @@ from urllib.request import Request, urlopen
 import pytest
 from pydantic import BaseModel, ConfigDict
 
+from infra.logging import get_logger
+
 DEFAULT_TIMEOUT = 10.0
 DEFAULT_ENCODING = "utf-8"
 DEFAULT_USER_AGENT = "datadoggo-v2/https-client"
@@ -42,6 +44,8 @@ class HttpResponse(BaseModel):
 
 
 Fetcher = Callable[[str, str, dict[str, str], bytes | None, float], HttpResponse]
+
+LOG = get_logger()
 
 
 class HttpsClient:
@@ -129,10 +133,25 @@ class HttpsClient:
             response = self._fetcher(method, url, header_dict, data, actual_timeout)
         except URLError as exc:
             # pragma: no cover - ネットワークエラーは通常モックで再現しない
+            LOG.error(
+                "HTTPリクエストに失敗しました",
+                method=method,
+                url=url,
+                timeout=actual_timeout,
+                error=str(exc),
+            )
             raise RuntimeError("HTTPリクエストに失敗しました") from exc
 
         if response.encoding is None:
             response = response.model_copy(update={"encoding": self._default_encoding})
+
+        LOG.debug(
+            "HTTPレスポンスを受信しました",
+            method=method,
+            url=url,
+            status_code=response.status_code,
+            bytes=len(response.body),
+        )
 
         return response
 

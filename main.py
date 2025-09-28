@@ -1,3 +1,6 @@
+# mainはモックなので触らないこと
+
+
 def main():
     print("Hi")
 
