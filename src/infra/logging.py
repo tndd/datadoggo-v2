@@ -9,7 +9,8 @@ from pathlib import Path
 import zstandard as zstd
 from loguru import logger as _logger
 
-DEFAULT_LOG_PATH = Path("logs/rss_errors.log")
+DEFAULT_LOG_DIR = Path("logs")
+DEFAULT_LOG_NAME = "app.log"
 _LOG_STATE: dict[str, int | None] = {"sink_id": None}
 
 
@@ -18,6 +19,7 @@ def configure_logging(
     log_path: Path | None = None,
     serialize: bool = True,
     enqueue: bool = True,
+    label: str | None = None,
 ) -> None:
     """loguruの設定を初期化する"""
 
@@ -28,7 +30,7 @@ def configure_logging(
 
     _logger.remove()
 
-    target_path = log_path or DEFAULT_LOG_PATH
+    target_path = _resolve_log_path(log_path=log_path, label=label)
     target_path.parent.mkdir(parents=True, exist_ok=True)
 
     _LOG_STATE["sink_id"] = _logger.add(
@@ -67,6 +69,16 @@ def _compress_to_zst(path: str) -> None:
                 writer.write(chunk)
 
     source_path.unlink(missing_ok=True)
+
+
+def _resolve_log_path(*, log_path: Path | None, label: str | None) -> Path:
+    if log_path is not None:
+        return log_path
+
+    if label:
+        return DEFAULT_LOG_DIR / f"{label}.log"
+
+    return DEFAULT_LOG_DIR / DEFAULT_LOG_NAME
 
 
 class InterceptHandler(logging.Handler):
