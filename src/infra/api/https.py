@@ -45,7 +45,7 @@ class HttpResponse(BaseModel):
 
 Fetcher = Callable[[str, str, dict[str, str], bytes | None, float], HttpResponse]
 
-LOG = get_logger(label="https")
+LOG = get_logger()
 
 
 class HttpsClient:

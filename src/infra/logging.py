@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 DEFAULT_LOG_DIR = Path("logs")
 DEFAULT_LOG_NAME = "app.log"
 _LOG_STATE: dict[str, int | None] = {"sink_id": None}
+_LABEL_SEGMENT_LIMIT = 2
 
 
 def configure_logging(
@@ -95,9 +96,11 @@ def get_logger(
     """ロガーにコンポーネント情報を付与して取得する"""
 
     target_component = component or _resolve_caller_component()
+    target_label = label or _derive_label(target_component)
+
     base = _logger
-    if label:
-        base = base.bind(label=label)
+    if target_label:
+        base = base.bind(label=target_label)
     return base.bind(component=target_component)
 
 
@@ -123,6 +126,16 @@ def _normalize_module_name(name: str) -> str:
     if name.startswith("src."):
         return name
     return name
+
+
+def _derive_label(component: str) -> str:
+    parts = component.split(".")
+    filtered = [part for part in parts if part and part != "src"]
+    if not filtered:
+        return ""
+    if len(filtered) >= _LABEL_SEGMENT_LIMIT:
+        return ".".join(filtered[:_LABEL_SEGMENT_LIMIT])
+    return filtered[0]
 
 
 class InterceptHandler(logging.Handler):

@@ -10,7 +10,7 @@ from src.infra.logging import get_logger
 
 PathLike = Union[str, Path]
 
-_log = get_logger(label="storage")
+_log = get_logger()
 
 
 class SaveFormat(Enum):

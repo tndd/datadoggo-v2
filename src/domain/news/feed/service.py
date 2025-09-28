@@ -20,7 +20,7 @@ from ..common import ensure_http_url
 from .model import FeedItem, FeedRecord
 
 DEFAULT_FEED_STATUS_CODE = None
-_log = get_logger(label="feed")
+_log = get_logger()
 
 
 def create_feed(

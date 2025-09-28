@@ -9,7 +9,7 @@ from pydoll.browser.options import ChromiumOptions
 
 from infra.logging import get_logger
 
-LOG = get_logger(label="browser")
+LOG = get_logger()
 
 
 class PageContent(BaseModel):
