@@ -24,7 +24,7 @@ DEFAULT_OBJECT_EXTENSION = ".zst"
 SHARD_PREFIX_LENGTH = 2
 MAX_SAFE_KEY_LENGTH = DEFAULT_MAX_STORAGE_KEY_LENGTH
 
-_log = get_logger(component="infra.storage.bucket", label="storage")
+_log = get_logger(label="storage")
 
 
 def save_object(

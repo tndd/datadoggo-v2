@@ -15,7 +15,7 @@ from infra.logging import get_logger
 RSS_INPUT = Union[str, bytes, bytearray]
 _AMPERSAND_PATTERN = re.compile(r"&(?!(?:amp|lt|gt|quot|apos|#[0-9]+|#x[0-9A-Fa-f]+);)")
 
-LOG = get_logger(component="infra.parse", label="parse")
+LOG = get_logger(label="parse")
 
 
 def parse_rss(payload: RSS_INPUT) -> Element:

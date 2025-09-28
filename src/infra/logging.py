@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import inspect
 import logging
 import sys
+from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -85,13 +87,42 @@ def _resolve_log_path(*, log_path: Path | None, label: str | None) -> Path:
     return DEFAULT_LOG_DIR / DEFAULT_LOG_NAME
 
 
-def get_logger(*, component: str, label: str | None = None) -> "Logger":
+def get_logger(
+    *,
+    component: str | None = None,
+    label: str | None = None,
+) -> "Logger":
     """ロガーにコンポーネント情報を付与して取得する"""
 
+    target_component = component or _resolve_caller_component()
     base = _logger
     if label:
         base = base.bind(label=label)
-    return base.bind(component=component)
+    return base.bind(component=target_component)
+
+
+def _resolve_caller_component() -> str:
+    frame = inspect.currentframe()
+    if frame is None:
+        return "unknown"
+
+    try:
+        caller_frame = frame.f_back
+        if caller_frame is None:
+            return "unknown"
+        module = inspect.getmodule(caller_frame)
+        if module is None:
+            return "unknown"
+        return _normalize_module_name(module.__name__)
+    finally:
+        del frame
+
+
+@lru_cache(maxsize=256)
+def _normalize_module_name(name: str) -> str:
+    if name.startswith("src."):
+        return name
+    return name
 
 
 class InterceptHandler(logging.Handler):

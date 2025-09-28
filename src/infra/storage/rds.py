@@ -14,7 +14,7 @@ from infra.logging import get_logger
 DEFAULT_DATABASE_URL = "sqlite:///data/datadoggo.db"
 DATABASE_ENV_VAR = "FEED_DATABASE_URL"
 
-LOG = get_logger(component="infra.storage.rds", label="storage")
+LOG = get_logger(label="storage")
 
 
 def get_database_url() -> str:
