@@ -1,4 +1,81 @@
-"""ログ設定ユーティリティ"""
+"""アプリケーション全体で利用する構造化ログシステム。
+
+loguruをベースに、以下の機能を提供する。
+- JSON形式でのファイル出力 (ローテーション、圧縮機能付き)
+- 呼び出し元モジュール名の自動的なコンテキスト付与
+- 標準loggingライブラリとの連携
+- pytestでのテスト容易性
+
+## 基本的な使い方
+
+1. **初期化**
+   アプリケーションの起動時に一度だけ呼び出す。
+
+   ```python
+   from infra.logging import configure_logging
+
+   def main():
+       configure_logging()
+       # ...
+   ```
+
+2. **ロガーの取得と利用**
+   各モジュールで `get_logger()` を呼び出してロガーを取得し、メッセージを記録する。
+
+   ```python
+   from infra.logging import get_logger
+
+   LOG = get_logger()
+
+   def my_function():
+       LOG.info("処理を開始しました")
+       try:
+           # ...
+           LOG.debug("詳細なデバッグ情報")
+       except Exception as e:
+           LOG.exception("予期せぬエラーが発生しました")
+   ```
+
+## 構造化データによるコンテキスト付与
+
+キーワード引数で渡した値は、JSONログの `extra` フィールドに記録される。
+これにより、ログの検索や分析が容易になる。
+
+```python
+LOG.warning(
+    "不正なリクエストをスキップしました",
+    request_id="req-123",
+    user_id=456,
+)
+```
+
+## テストでの利用 (`pytest`)
+
+本ロギングシステムはテスト容易性を考慮して設計されている。
+`src/conftest.py` で定義されている `app_logging` フィクスチャを使用することで、
+ログ出力をテスト内で簡単に検証できる。
+
+```python
+import json
+
+# app_loggingフィクスチャを引数に追加
+def test_skipping_item_logs_details(app_logging):
+    # 不正なデータを処理する関数を呼び出す
+    process_invalid_item(item_id="item-001")
+
+    # ログファイルの内容を読み込む
+    log_content = app_logging.read_text()
+    assert "不正なアイテムをスキップしました" in log_content
+
+    # JSONログとしてパースし、詳細なコンテキストを検証する
+    log_lines = log_content.strip().splitlines()
+    last_log = json.loads(log_lines[-1])
+    record = last_log["record"]
+
+    assert record["message"] == "不正なアイテムをスキップしました"
+    assert record["extra"]["item_id"] == "item-001"
+```
+"""
 
 from __future__ import annotations
 
