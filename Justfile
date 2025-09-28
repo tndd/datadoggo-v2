@@ -1,11 +1,13 @@
 set shell := ["bash", "-lc"]
 
 sync:
-	uvsync
+	uv sync
 	uv pip install -e .
 
-test:
+check:
 	uv run ruff format .
 	uv run ruff check .
 	uv run pyright
+
+test: check
 	uv run pytest
