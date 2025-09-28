@@ -5,9 +5,13 @@ from __future__ import annotations
 import logging
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import zstandard as zstd
 from loguru import logger as _logger
+
+if TYPE_CHECKING:
+    from loguru import Logger
 
 DEFAULT_LOG_DIR = Path("logs")
 DEFAULT_LOG_NAME = "app.log"
@@ -79,6 +83,15 @@ def _resolve_log_path(*, log_path: Path | None, label: str | None) -> Path:
         return DEFAULT_LOG_DIR / f"{label}.log"
 
     return DEFAULT_LOG_DIR / DEFAULT_LOG_NAME
+
+
+def get_logger(*, component: str, label: str | None = None) -> "Logger":
+    """ロガーにコンポーネント情報を付与して取得する"""
+
+    base = _logger
+    if label:
+        base = base.bind(label=label)
+    return base.bind(component=component)
 
 
 class InterceptHandler(logging.Handler):

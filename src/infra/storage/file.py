@@ -6,8 +6,11 @@ from types import FrameType
 from typing import Optional, Union
 
 from src.infra.compute import generate_timestamped_filename
+from src.infra.logging import get_logger
 
 PathLike = Union[str, Path]
+
+_log = get_logger(component="infra.storage.file", label="storage")
 
 
 class SaveFormat(Enum):
@@ -21,9 +24,20 @@ def load_file(path: PathLike) -> str:
     """ファイルを読み込む"""
     try:
         target_path = _resolve_any_path(path)
-        return target_path.read_text(encoding="utf-8")
+        content = target_path.read_text(encoding="utf-8")
+        byte_length = len(content.encode("utf-8"))
+        _log.info(
+            "ファイルを読み込みました",
+            path=str(target_path),
+            bytes=byte_length,
+        )
+        return content
     except Exception as error:
-        print(f"ファイル読み込みエラー: {error}")
+        _log.exception(
+            "ファイル読み込みに失敗しました",
+            path=str(path),
+            error=str(error),
+        )
         return ""
 
 
@@ -39,10 +53,20 @@ def save_content_to_file(
         resolved_path = _prepare_output_path(filepath, format, output_dir)
         resolved_path.parent.mkdir(parents=True, exist_ok=True)
         resolved_path.write_text(content, encoding="utf-8")
-        print(f"\nコンテンツを {resolved_path} に保存しました。")
+        byte_length = len(content.encode("utf-8"))
+        _log.info(
+            "テキストコンテンツを保存しました",
+            path=str(resolved_path),
+            bytes=byte_length,
+            format=format.value,
+        )
         return str(resolved_path)
     except Exception as error:
-        print(f"ファイル保存エラー: {error}")
+        _log.exception(
+            "テキストコンテンツの保存に失敗しました",
+            path=str(filepath),
+            error=str(error),
+        )
         return ""
 
 
@@ -53,10 +77,18 @@ def save_bytes_to_file(content: bytes, filepath: PathLike) -> str:
         target_path = _to_path(filepath)
         target_path.parent.mkdir(parents=True, exist_ok=True)
         target_path.write_bytes(content)
-        print(f"\nバイナリを {target_path} に保存しました。")
+        _log.info(
+            "バイナリコンテンツを保存しました",
+            path=str(target_path),
+            bytes=len(content),
+        )
         return str(target_path)
     except Exception as error:
-        print(f"バイナリ保存エラー: {error}")
+        _log.exception(
+            "バイナリコンテンツの保存に失敗しました",
+            path=str(filepath),
+            error=str(error),
+        )
         return ""
 
 
@@ -65,9 +97,19 @@ def load_bytes(path: PathLike) -> bytes:
 
     try:
         target_path = _resolve_any_path(path)
-        return target_path.read_bytes()
+        payload = target_path.read_bytes()
+        _log.info(
+            "バイナリを読み込みました",
+            path=str(target_path),
+            bytes=len(payload),
+        )
+        return payload
     except Exception as error:
-        print(f"バイナリ読み込みエラー: {error}")
+        _log.exception(
+            "バイナリ読み込みに失敗しました",
+            path=str(path),
+            error=str(error),
+        )
         return b""
 
 

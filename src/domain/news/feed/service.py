@@ -13,13 +13,14 @@ import pytest
 from pydantic import ValidationError
 
 from infra.compute import hash_text_sha256
-from infra.logging import logger
+from infra.logging import get_logger
 from infra.parse import parse_rss
 
 from ..common import ensure_http_url
 from .model import FeedItem, FeedRecord
 
 DEFAULT_FEED_STATUS_CODE = None
+_log = get_logger(component="domain.news.feed.service", label="feed")
 
 
 def create_feed(
@@ -102,7 +103,7 @@ def convert_rss_items_to_feed_items(
                 )
             )
         except (ValueError, ValidationError) as exc:
-            logger.warning(
+            _log.warning(
                 "invalid feed item skipped",
                 bucket_id=bucket_id,
                 feed_url=link,

@@ -7,6 +7,10 @@ from pydantic import BaseModel
 from pydoll.browser.chromium import Chrome
 from pydoll.browser.options import ChromiumOptions
 
+from infra.logging import get_logger
+
+LOG = get_logger(component="infra.api.browser.fetch", label="browser")
+
 
 class PageContent(BaseModel):
     """ブラウザから取得したページ素材"""
@@ -27,23 +31,31 @@ async def fetch_page_content(url: str) -> PageContent:
 async def _operate_browser(browser, url: str) -> PageContent:
     """ブラウザを操作しURLからコンテンツを取得する"""
     TIMEOUT = 3
-
     tab = await browser.start()
     await tab.go_to(url)
 
     # body要素が読み込まれるまで待機（エラー時は続行）
     try:
         await tab.find("body", timeout=TIMEOUT)
-    except Exception:
-        pass  # body要素が見つからなくても続行
-    print("ページが読み込まれました")
+    except Exception as error:
+        LOG.warning(
+            "body要素の読み込み待機に失敗しました",
+            url=url,
+            timeout=TIMEOUT,
+            error=str(error),
+        )
+    LOG.info("ページを読み込みました", url=url)
 
     html = await tab.page_source
     title = await _fetch_title(tab)
 
-    print(f"HTML長: {len(html)}文字")
-    print(f"タイトル: {title}")
-    print(f"最初の100文字: {html[:100]}")
+    LOG.info(
+        "ページコンテンツを取得しました",
+        url=url,
+        title=title,
+        html_length=len(html),
+        preview=html[:100],
+    )
 
     return PageContent(url=url, title=title, html=html)
 
@@ -65,7 +77,7 @@ async def _fetch_title(tab) -> str:
         title_element = await tab.find(tag_name="title", timeout=2, raise_exc=False)
         return await title_element.text if title_element else "Unknown"
     except Exception as error:
-        print(f"タイトル取得エラー: {error}")
+        LOG.warning("タイトル取得に失敗しました", error=str(error))
         return "Unknown"
 
 

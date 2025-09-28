@@ -9,8 +9,12 @@ from typing import Iterator
 from sqlalchemy.engine import Engine, make_url
 from sqlmodel import Session, SQLModel, create_engine
 
+from infra.logging import get_logger
+
 DEFAULT_DATABASE_URL = "sqlite:///data/datadoggo.db"
 DATABASE_ENV_VAR = "FEED_DATABASE_URL"
+
+LOG = get_logger(component="infra.storage.rds", label="storage")
 
 
 def get_database_url() -> str:
@@ -51,7 +55,11 @@ def session_scope(engine: Engine | None = None) -> Iterator[Session]:
     try:
         yield session
         session.commit()
-    except Exception:
+    except Exception as error:
+        LOG.exception(
+            "セッション処理中に例外が発生したためロールバックします",
+            error=str(error),
+        )
         session.rollback()
         raise
     finally:
