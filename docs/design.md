@@ -75,15 +75,15 @@ ArticleLinkにArticleContentをjoinしたもの。
 | content  | text       | 記事の内容                                       |
 | statsu   | text       | articleの記事内容の加工状況(llmなどを用いる予定) |
 
-### FetchedArticle
+### ArticleContent
 Articleの記事内容のバケット。
 fetchしてきたものをクラスとして表現することを目的としてる。
 
-| name    | type     | description                                              |
-| ------- | -------- | -------------------------------------------------------- |
-| id      | text(PK) | バケットキー (SHA256)。`save_article_to_bucket` の戻り値 |
-| url     | text     | RSS フィードの取得先 URL                                 |
-| content | bytes    | htmlがzstd圧縮されたもの                                 |
+| name | type     | description                                              |
+| ---- | -------- | -------------------------------------------------------- |
+| id   | text(PK) | バケットキー (SHA256)。`save_article_to_bucket` の戻り値 |
+| url  | text     | RSS フィードの取得先 URL                                 |
+| data | bytes    | htmlがzstd圧縮されたもの                                 |
 
 # 関数
 ## データ収集&保存
