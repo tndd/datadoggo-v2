@@ -275,7 +275,7 @@ class Tests:
 
     def test_convert_rss_items_to_feed_items_logs_invalid_http_url(
         self,
-        rss_logging,
+        app_logging,
     ) -> None:
         """
         docs:
@@ -303,7 +303,7 @@ class Tests:
 
         assert not items
 
-        log_path = rss_logging
+        log_path = app_logging
         assert log_path.exists()
 
         log_lines = [line for line in log_path.read_text().splitlines() if line.strip()]

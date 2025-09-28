@@ -11,7 +11,7 @@ from infra.logging import configure_logging, reset_logging
 
 
 @pytest.fixture
-def rss_logging(fs: FakeFilesystem):
+def app_logging(fs: FakeFilesystem):
     """テスト用にloguruを仮想ファイルシステムへ設定する"""
 
     log_path = Path("/logs/app.log")
