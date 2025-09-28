@@ -110,13 +110,29 @@ def _resolve_caller_component() -> str:
         return "unknown"
 
     try:
-        caller_frame = frame.f_back
-        if caller_frame is None:
-            return "unknown"
-        module = inspect.getmodule(caller_frame)
-        if module is None:
-            return "unknown"
-        return _normalize_module_name(module.__name__)
+        fallback = _normalize_module_name(__name__)
+        skip_names = {fallback}
+        if fallback.startswith("src."):
+            skip_names.add(fallback.removeprefix("src."))
+        else:
+            skip_names.add(f"src.{fallback}")
+
+        candidate = frame.f_back
+        depth = 0
+        max_depth = 64
+
+        while candidate is not None and depth < max_depth:
+            module = inspect.getmodule(candidate)
+            module_name = getattr(module, "__name__", "") if module else ""
+            if module_name:
+                normalized = _normalize_module_name(module_name)
+                if normalized not in skip_names:
+                    return normalized
+
+            candidate = candidate.f_back
+            depth += 1
+
+        return fallback
     finally:
         del frame
 
@@ -151,6 +167,72 @@ class InterceptHandler(logging.Handler):
 
         log = _logger.bind(logger_name=record.name)
         log.opt(depth=6, exception=record.exc_info, colors=False).log(level, message)
+
+
+class Tests:
+    @staticmethod
+    def _create_logger_extra(module_name: str) -> dict[str, object]:
+        """
+        docs:
+            目的:
+                任意のモジュール名で get_logger を呼び出し、付与される
+                extra 情報を取得する共通ヘルパーを提供する。
+            検証観点:
+                - module_name で指定したパスが component に反映される。
+                - 実行後に sys.modules の状態を汚さない。
+        """
+
+        import sys
+        from types import ModuleType
+        from typing import Any, cast
+
+        module = ModuleType(module_name)
+        package_name = module_name.rpartition(".")[0]
+        module.__dict__["__package__"] = package_name
+        module.__dict__["__file__"] = __file__
+        sys.modules[module_name] = module
+
+        try:
+            exec(
+                "from infra.logging import get_logger\nPROBE_LOGGER = get_logger()",
+                module.__dict__,
+            )
+            logger_with_extra = cast(Any, module.__dict__["PROBE_LOGGER"])
+            return cast(dict[str, object], logger_with_extra._options[-1])
+        finally:
+            sys.modules.pop(module_name, None)
+
+    def test_resolve_component_from_domain_module(self) -> None:
+        """
+        docs:
+            目的:
+                多段モジュールから get_logger を呼び出した際に
+                正しいコンポーネントが付与されることを確認する。
+            検証観点:
+                - component がモジュール名そのものになる。
+                - label が先頭2階層へ縮約される。
+        """
+
+        extra = self._create_logger_extra("probe_domain.news.feed.service")
+
+        assert extra["component"] == "probe_domain.news.feed.service"
+        assert extra["label"] == "probe_domain.news"
+
+    def test_resolve_component_from_src_namespaced_module(self) -> None:
+        """
+        docs:
+            目的:
+                src 名前空間で get_logger を呼び出しても
+                元モジュールのコンポーネントが利用されることを確認する。
+            検証観点:
+                - component がモジュール名そのものになる。
+                - label が期待通り先頭2階層に縮約される。
+        """
+
+        extra = self._create_logger_extra("src.probe_infra.storage.bucket")
+
+        assert extra["component"] == "src.probe_infra.storage.bucket"
+        assert extra["label"] == "probe_infra.storage"
 
 
 logger = _logger
