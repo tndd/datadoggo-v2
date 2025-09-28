@@ -35,7 +35,7 @@
    - `pyfakefs` を利用して仮想ファイルシステム上に `logs/` を作成し、logger sink をそこへ向ける。生成されたJSONログの`error_type`などを確認し、物理的な`tmp`ディレクトリは使用しない。
 5. **アプリ初期化点の整備**
    - CLIやワーカー起動想定箇所（`main.py`や今後のワークフローエントリ）で`configure_logging()`を最初に呼び出す。
-   - pytestでは`conftest.py`を追加し、`configure_logging()`を一度だけ呼ぶfixtureを用意してテスト実行時のディスク書き込み先を`tmp_path`へ切り替える。
+   - pytestでは`src/conftest.py`を追加し、`configure_logging()`を一度だけ呼ぶfixtureを用意。`pyfakefs`で提供される仮想ファイルシステム上に`logs/`ディレクトリを作成し、テスト時のログ出力先を隔離する。
 
 ## 検証計画
 - `uv run ruff check` / `uv run pyright` / `uv run pytest`
