@@ -14,7 +14,7 @@
 - **記録先**: `logs/rss_errors.log`（新規ディレクトリ `logs/` をリポジトリ直下に作成）。
   - ローテーション: ファイルサイズ10MBで世代交代。
   - 保持: 最新10ファイル。
-  - 圧縮: `zip`で自動圧縮。
+  - 圧縮: プロジェクト既定に合わせ `zstd`（`.zst`）で自動圧縮。
 - **記録粒度**: Feed変換スキップ時は`logger.warning`、予期しない変換失敗は`logger.error`。
 - **出力形式**: `serialize=True`でJSONログ。`bucket_id` / `feed_url` / `error_type` / `exception_message` / `published_at` / `source`（例:`convert_rss_items_to_feed_items`）をkeyとして含める。
 - **拡張性**: 将来的にSQLiteへも永続化したい場合、同じ辞書データをキューへ送るhookを挟むだけで再利用できるよう、ログ構築を関数化する。
@@ -45,4 +45,3 @@
 - ローテーション設定によりログ肥大化を防止。
 - 1日1回のcron等で`logs/`配下を監視し、必要なら外部集約（CloudWatchなど）へ転送。
 - 将来的にSQLiteへも保存する要件が出た場合は、`infra/logging`にHookを追加し、同データを`error_feed_items`テーブルへINSERTする機構を再利用。
-
