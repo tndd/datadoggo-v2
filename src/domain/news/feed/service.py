@@ -9,6 +9,7 @@ from xml.etree import ElementTree as ET
 from xml.etree.ElementTree import Element
 
 import pytest
+from pydantic import ValidationError
 
 from infra.compute import hash_text_sha256
 from infra.parse import parse_rss
@@ -98,7 +99,7 @@ def convert_rss_items_to_feed_items(
                     pub_date=pub_date,
                 )
             )
-        except ValueError:
+        except (ValueError, ValidationError):
             continue
 
     return feed_items
@@ -224,6 +225,42 @@ class Tests:
         assert len(items) == 1
         assert str(items[0].url) == "https://example.com/valid"
         assert items[0].status_code is DEFAULT_FEED_STATUS_CODE
+
+    def test_convert_rss_items_to_feed_items_skips_invalid_http_url(self) -> None:
+        """
+        docs:
+            目的:
+                URLが不正なitemが全体処理を止めずにスキップされることを確認する。
+            検証観点:
+                - 不正URLのitemは結果に含まれない。
+                - 妥当なitemはFeedItemとして生成される。
+        """
+
+        rss_xml = """
+            <rss version="2.0">
+                <channel>
+                    <item>
+                        <title>Invalid URL</title>
+                        <link>notaurl</link>
+                        <pubDate>Sat, 27 Sep 2025 15:30:00 GMT</pubDate>
+                    </item>
+                    <item>
+                        <title>Valid URL</title>
+                        <link>https://example.com/article</link>
+                        <pubDate>Sat, 27 Sep 2025 15:30:00 GMT</pubDate>
+                    </item>
+                </channel>
+            </rss>
+        """
+        root = parse_rss(rss_xml)
+
+        items = convert_rss_items_to_feed_items(root, bucket_id="rss-bucket-4")
+
+        assert len(items) == 1
+        first = items[0]
+        assert first.title == "Valid URL"
+        assert str(first.url) == "https://example.com/article"
+        assert first.bucket_id == "rss-bucket-4"
 
     def test_convert_rss_items_to_feed_items_raises_without_channel(self) -> None:
         """
