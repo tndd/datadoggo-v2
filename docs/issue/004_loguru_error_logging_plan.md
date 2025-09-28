@@ -31,8 +31,8 @@
    - 例外捕捉ブロックで `logger.warning("invalid feed item", bucket_id=bucket_id, feed_url=link, error_type=type(exc).__name__, exception_message=str(exc))` を呼び出し。
    - 想定外例外（チャンネル欠損など）向けに、上位層からも同loggerを利用できるよう公開APIとする。
 4. **テスト追加**
-   - `tests`モジュールにログ出力を検証するテストを追加。`tmp_path`へログを出力するよう一時的にlogger sinkを差し替え、メッセージがJSONで記録されること、`error_type`が期待値になることを確認。
-   - 既存の`convert_rss_items_to_feed_items`テストに副作用検証を追加するのではなく、新規で`Tests`配下に`Test_logging`モジュールを設ける。
+   - 既存のモジュール内`Tests`構成を守り、`convert_rss_items_to_feed_items`に隣接するテストクラスへログ検証を追加。
+   - `pyfakefs` を利用して仮想ファイルシステム上に `logs/` を作成し、logger sink をそこへ向ける。生成されたJSONログの`error_type`などを確認し、物理的な`tmp`ディレクトリは使用しない。
 5. **アプリ初期化点の整備**
    - CLIやワーカー起動想定箇所（`main.py`や今後のワークフローエントリ）で`configure_logging()`を最初に呼び出す。
    - pytestでは`conftest.py`を追加し、`configure_logging()`を一度だけ呼ぶfixtureを用意してテスト実行時のディスク書き込み先を`tmp_path`へ切り替える。
