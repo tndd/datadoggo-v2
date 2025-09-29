@@ -47,7 +47,7 @@ def find_article_by_id(session: Session, feed_id: str) -> Article | None:
 
 class Tests:
     class Test_find_article_by_id:
-        def test_find_article_by_id_returns_article(self, fs) -> None:
+        def test_find_article_by_id_returns_article(self, fs, test_db_env) -> None:
             """
             docs:
                 目的: 保存済み記事を完全なArticleモデルとして取得できることを確認する。
@@ -74,50 +74,46 @@ class Tests:
 
             if not fs.exists("/tmp"):
                 fs.create_dir("/tmp")
-            # インメモリDBを使用して毎回クリーンな状態から開始
-            os.environ["FEED_DATABASE_URL"] = "sqlite:///:memory:"
-            try:
-                from infra.storage.rds import create_sqlite_engine
+            # test_db_envフィクスチャが環境変数を設定済み
+            from infra.storage.rds import create_sqlite_engine
 
-                # インメモリDBのエンジンを作成
-                engine = create_sqlite_engine("sqlite:///:memory:")
+            # インメモリDBのエンジンを作成
+            engine = create_sqlite_engine("sqlite:///:memory:")
 
-                # FeedRecordのテーブルを明示的に作成
-                FeedRecord.metadata.create_all(engine)
+            # FeedRecordのテーブルを明示的に作成
+            FeedRecord.metadata.create_all(engine)
 
-                with session_scope(engine) as session:
-                    # Feedレコードを作成
-                    feed_time = datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc)
-                    feed_record = FeedRecord(
-                        id="article_test",
-                        url="https://example.com/article",
-                        title="記事",
-                        pub_date=feed_time,
-                        status_code=200,
-                        created_at=feed_time,
-                        updated_at=feed_time,
-                    )
-                    session.add(feed_record)
-                    session.commit()
+            with session_scope(engine) as session:
+                # Feedレコードを作成
+                feed_time = datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc)
+                feed_record = FeedRecord(
+                    id="article_test",
+                    url="https://example.com/article",
+                    title="記事",
+                    pub_date=feed_time,
+                    status_code=200,
+                    created_at=feed_time,
+                    updated_at=feed_time,
+                )
+                session.add(feed_record)
+                session.commit()
 
-                    # Article作成してバケット保存
-                    article = Article(
-                        id="article_test",
-                        url=cast(HttpUrl, "https://example.com/article"),
-                        title="記事",
-                        pub_date=feed_time,
-                        html_content="<html>article</html>",
-                    )
-                    save_article_content(article)
+                # Article作成してバケット保存
+                article = Article(
+                    id="article_test",
+                    url=cast(HttpUrl, "https://example.com/article"),
+                    title="記事",
+                    pub_date=feed_time,
+                    html_content="<html>article</html>",
+                )
+                save_article_content(article)
 
-                    # 取得テスト
-                    retrieved = find_article_by_id(session, "article_test")
-                    assert retrieved is not None
-                    assert retrieved.html_content == "<html>article</html>"
-            finally:
-                os.environ.pop("FEED_DATABASE_URL", None)
+                # 取得テスト
+                retrieved = find_article_by_id(session, "article_test")
+                assert retrieved is not None
+                assert retrieved.html_content == "<html>article</html>"
 
-        def test_find_article_by_id_returns_none_when_missing(self, fs) -> None:
+        def test_find_article_by_id_returns_none_when_missing(self, fs, test_db_env) -> None:
             """
             docs:
                 目的: 未保存IDでは None が返ることを確認する。
@@ -140,35 +136,31 @@ class Tests:
 
             if not fs.exists("/tmp"):
                 fs.create_dir("/tmp")
-            # インメモリDBを使用して毎回クリーンな状態から開始
-            os.environ["FEED_DATABASE_URL"] = "sqlite:///:memory:"
-            try:
-                from infra.storage.rds import create_sqlite_engine
+            # test_db_envフィクスチャが環境変数を設定済み
+            from infra.storage.rds import create_sqlite_engine
 
-                # インメモリDBのエンジンを作成
-                engine = create_sqlite_engine("sqlite:///:memory:")
+            # インメモリDBのエンジンを作成
+            engine = create_sqlite_engine("sqlite:///:memory:")
 
-                # FeedRecordのテーブルを明示的に作成
-                FeedRecord.metadata.create_all(engine)
+            # FeedRecordのテーブルを明示的に作成
+            FeedRecord.metadata.create_all(engine)
 
-                with session_scope(engine) as session:
-                    # 未登録IDのテスト
-                    assert find_article_by_id(session, "missing") is None
+            with session_scope(engine) as session:
+                # 未登録IDのテスト
+                assert find_article_by_id(session, "missing") is None
 
-                    # status_code != 200のテスト
-                    feed_time = datetime(2025, 9, 29, 10, 0, tzinfo=timezone.utc)
-                    failed_feed = FeedRecord(
-                        id="failed_test",
-                        url="https://example.com/fail",
-                        title="失敗",
-                        pub_date=feed_time,
-                        status_code=404,
-                        created_at=feed_time,
-                        updated_at=feed_time,
-                    )
-                    session.add(failed_feed)
-                    session.commit()
+                # status_code != 200のテスト
+                feed_time = datetime(2025, 9, 29, 10, 0, tzinfo=timezone.utc)
+                failed_feed = FeedRecord(
+                    id="failed_test",
+                    url="https://example.com/fail",
+                    title="失敗",
+                    pub_date=feed_time,
+                    status_code=404,
+                    created_at=feed_time,
+                    updated_at=feed_time,
+                )
+                session.add(failed_feed)
+                session.commit()
 
-                    assert find_article_by_id(session, "failed_test") is None
-            finally:
-                os.environ.pop("FEED_DATABASE_URL", None)
+                assert find_article_by_id(session, "failed_test") is None
