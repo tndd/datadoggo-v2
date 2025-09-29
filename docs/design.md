@@ -29,22 +29,17 @@ links.yml に定義された RSS フィードのエントリ。
 
 ## article
 
-### ArticleBucketMetadata
-Articleの記事内容のバケットのメタデータ
+Article機能は記事のHTMLコンテンツをバケットに保存し、Feedテーブルのメタデータと組み合わせて完全なArticleを提供する。
 
-| name       | type       | description                                              |
-| ---------- | ---------- | -------------------------------------------------------- |
-| id         | text(PK)   | バケットキー (SHA256)。`save_article_to_bucket` の戻り値 |
-| url        | text       | RSS フィードの取得先 URL                                 |
-| status     | text       | `RssBucketStatus`。`pending/registered/overridden/error` |
-| saved_at   | timestampz | 保存日時(UTC)                                            |
-| updated_at | timestampz | 更新日時(UTC)                                            |
+**設計方針:**
+- ArticleBucketMetadataテーブルは廃止。メタデータは既存のFeedテーブルから取得。
+- バケットには記事のHTMLコンテンツのみを保存。
+- 記事の取得状況はFeedテーブルの `status_code` で管理（200=成功、その他=失敗）。
 
-
-**補足:**
-- デフォルトでは `sqlite:///data/datadoggo.db` に保存する。
-- 環境変数 `FEED_DATABASE_URL` で接続先を切り替え可能。
-- RSS 取得時に XML をバケットへ保存するステップは廃止し、パース結果を直に Feed テーブルへ永続化する。
+**処理フロー:**
+1. `fetch_article_content`: FeedItemから記事HTMLを取得してArticleを生成
+2. `save_article_content`: ArticleのHTMLコンテンツをバケットに保存
+3. `find_article_by_id`: FeedテーブルとバケットからArticleを再構築
 
 # バケット
 ## article

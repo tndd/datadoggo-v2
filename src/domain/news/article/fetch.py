@@ -6,15 +6,15 @@ from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
 from infra.logging import get_logger
 from src.domain.news.feed.model import FeedItem
 
-from .model import ArticleContent
+from .model import Article
 
 _log = get_logger()
 
 
 def fetch_article_content(
     feed: FeedItem, *, client: HttpsClient | None = None
-) -> ArticleContent | None:
-    """FeedItemを基に記事HTMLを取得しArticleContentを生成する"""
+) -> Article | None:
+    """FeedItemを基に記事HTMLを取得しArticleを生成する"""
 
     http_client = client or HttpsClient()
 
@@ -39,7 +39,7 @@ def fetch_article_content(
         return None
 
     html = _decode_body(response)
-    content = ArticleContent(
+    article = Article(
         id=feed.id,
         url=feed.url,
         title=feed.title,
@@ -52,7 +52,7 @@ def fetch_article_content(
         url=str(feed.url),
         bytes=len(response.body),
     )
-    return content
+    return article
 
 
 def _decode_body(response: HttpResponse) -> str:
@@ -67,7 +67,7 @@ class Tests:
         def test_fetch_article_content_returns_model_on_success(self) -> None:
             """
             docs:
-                目的: ステータス200の場合にArticleContentが生成されることを確認する。
+                目的: ステータス200の場合にArticleが生成されることを確認する。
                 検証観点:
                     - HTML本文がデコードされる。
                     - FeedItemの属性が引き継がれる。
@@ -109,11 +109,11 @@ class Tests:
                 updated_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
             )
 
-            content = fetch_article_content(feed, client=client)
+            article = fetch_article_content(feed, client=client)
 
-            assert content is not None
-            assert content.html_content == html_text
-            assert content.id == feed.id
+            assert article is not None
+            assert article.html_content == html_text
+            assert article.id == feed.id
 
         def test_fetch_article_content_returns_none_on_error_status(self) -> None:
             """
@@ -156,6 +156,6 @@ class Tests:
                 updated_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
             )
 
-            content = fetch_article_content(feed, client=client)
+            article = fetch_article_content(feed, client=client)
 
-            assert content is None
+            assert article is None

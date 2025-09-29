@@ -1,162 +1,69 @@
-"""Articleメタデータ検索とArticle再構築"""
+"""Article検索とArticle再構築"""
 
 from __future__ import annotations
 
-from typing import Any, cast
-
-from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from infra.storage.bucket import load_object
-from infra.storage.rds import initialize_database
+from src.domain.news.feed.model import FeedRecord
 
-from .model import (
-    Article,
-    ArticleBucketMetadata,
-    ArticleBucketMetadataRecord,
-    ArticleFetchStatus,
-    record_to_metadata,
-)
-
-
-class ArticleSearchQuery(BaseModel):
-    """ArticleBucketMetadata検索用の入力モデル"""
-
-    statuses: list[ArticleFetchStatus] | None = Field(default=None)
-
-
-def search_article_metadata(
-    session: Session, query: ArticleSearchQuery | None = None
-) -> list[ArticleBucketMetadata]:
-    """Articleメタデータを検索してドメインモデル一覧で返す"""
-
-    initialize_database()
-
-    effective_query = query or ArticleSearchQuery()
-
-    statement = select(ArticleBucketMetadataRecord)
-    if effective_query.statuses:
-        status_column = cast(Any, ArticleBucketMetadataRecord.status)
-        statement = statement.where(
-            status_column.in_([status.value for status in effective_query.statuses])
-        )
-
-    records = session.exec(statement).all()
-    return [record_to_metadata(record) for record in records]
+from .model import Article
 
 
 def find_article_by_id(session: Session, feed_id: str) -> Article | None:
-    """保存済みArticleを完全なビューモデルとして取得する"""
+    """保存済みArticleを取得する。Feedテーブルからメタデータを取得し、バケットからHTMLを取得"""
 
-    initialize_database()
-
-    statement = select(ArticleBucketMetadataRecord).where(
-        ArticleBucketMetadataRecord.id == feed_id
-    )
-    record = session.exec(statement).first()
-    if record is None:
+    # Feedテーブルからメタデータを取得
+    statement = select(FeedRecord).where(FeedRecord.id == feed_id)
+    feed_record = session.exec(statement).first()
+    if feed_record is None:
         return None
 
-    metadata = record_to_metadata(record)
-    if metadata.status is not ArticleFetchStatus.SAVED:
+    # status_codeが200以外の場合、取得失敗と判定
+    if feed_record.status_code != 200:
         return None
 
+    # バケットからHTMLコンテンツを取得
     html_content = load_object(
         bucket_name="article",
-        object_key=metadata.id,
+        object_key=feed_id,
         as_text=True,
     )
-    if not html_content:
+    if not html_content or not isinstance(html_content, str):
         return None
 
-    if not isinstance(html_content, str):
-        return None
+    from src.domain.news.common import ensure_http_url
 
     return Article(
-        id=metadata.id,
-        url=metadata.url,
-        title=metadata.title,
-        pub_date=metadata.pub_date,
+        id=feed_record.id,
+        url=ensure_http_url(feed_record.url),
+        title=feed_record.title,
+        pub_date=feed_record.pub_date,
         html_content=html_content,
     )
 
 
 class Tests:
-    class Test_search_article_metadata:
-        def test_search_article_metadata_filters_by_status(self, fs) -> None:
-            """
-            docs:
-                目的: ステータス指定でメタデータ一覧を絞り込めることを確認する。
-                検証観点:
-                    - FETCH_FAILED のみ抽出できる。
-            """
-
-            import os
-            from datetime import datetime, timezone
-            from pathlib import Path
-
-            from infra.storage.rds import session_scope
-
-            project_root = Path(__file__).resolve().parents[4]
-            if not fs.exists(str(project_root)):
-                fs.create_dir(str(project_root))
-            os.chdir(project_root)
-
-            if not fs.exists("/tmp"):
-                fs.create_dir("/tmp")
-            db_path = Path("/tmp/article-search-metadata.db")
-            os.environ["FEED_DATABASE_URL"] = f"sqlite:///{db_path}"
-            try:
-                from pydantic import HttpUrl
-
-                from .command import mark_fetch_failed, save_article_content
-                from .model import ArticleContent
-
-                with session_scope() as session:
-                    failed = mark_fetch_failed(
-                        session,
-                        feed_id="fail",
-                        url="https://example.com/fail",
-                        title="失敗",
-                        pub_date=datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc),
-                    )
-
-                    content = ArticleContent(
-                        id="ok",
-                        url=cast(HttpUrl, "https://example.com/ok"),
-                        title="成功",
-                        pub_date=datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc),
-                        html_content="<html>ok</html>",
-                    )
-                    save_article_content(session, content)
-
-                    failed_only = search_article_metadata(
-                        session,
-                        ArticleSearchQuery(statuses=[ArticleFetchStatus.FETCH_FAILED]),
-                    )
-                    assert [item.id for item in failed_only] == [failed.id]
-            finally:
-                os.environ.pop("FEED_DATABASE_URL", None)
-
     class Test_find_article_by_id:
         def test_find_article_by_id_returns_article(self, fs) -> None:
             """
             docs:
                 目的: 保存済み記事を完全なArticleモデルとして取得できることを確認する。
                 検証観点:
-                    - ArticleBucketMetadata とバケット HTML から Article が復元される。
+                    - Feedテーブル とバケット HTML から Article が復元される。
             """
 
             import os
             from datetime import datetime, timezone
             from pathlib import Path
+            from typing import cast
 
             from pydantic import HttpUrl
 
             from infra.storage.rds import session_scope
+            from src.domain.news.feed.model import FeedRecord
 
             from .command import save_article_content
-            from .model import ArticleContent
 
             project_root = Path(__file__).resolve().parents[4]
             if not fs.exists(str(project_root)):
@@ -169,18 +76,34 @@ class Tests:
             os.environ["FEED_DATABASE_URL"] = f"sqlite:///{db_path}"
             try:
                 with session_scope() as session:
-                    content = ArticleContent(
-                        id="article",
+                    # Feedレコードを作成
+                    feed_time = datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc)
+                    feed_record = FeedRecord(
+                        id="article_test",
+                        url="https://example.com/article",
+                        title="記事",
+                        pub_date=feed_time,
+                        status_code=200,
+                        created_at=feed_time,
+                        updated_at=feed_time,
+                    )
+                    session.add(feed_record)
+                    session.commit()
+
+                    # Article作成してバケット保存
+                    article = Article(
+                        id="article_test",
                         url=cast(HttpUrl, "https://example.com/article"),
                         title="記事",
-                        pub_date=datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc),
+                        pub_date=feed_time,
                         html_content="<html>article</html>",
                     )
-                    save_article_content(session, content)
+                    save_article_content(article)
 
-                    article = find_article_by_id(session, "article")
-                    assert article is not None
-                    assert article.html_content == "<html>article</html>"
+                    # 取得テスト
+                    retrieved = find_article_by_id(session, "article_test")
+                    assert retrieved is not None
+                    assert retrieved.html_content == "<html>article</html>"
             finally:
                 os.environ.pop("FEED_DATABASE_URL", None)
 
@@ -190,7 +113,7 @@ class Tests:
                 目的: 未保存IDでは None が返ることを確認する。
                 検証観点:
                     - メタデータ未登録時は None。
-                    - status が FETCH_FAILED の場合も None。
+                    - status_code が 200以外の場合も None。
             """
 
             import os
@@ -198,6 +121,7 @@ class Tests:
             from pathlib import Path
 
             from infra.storage.rds import session_scope
+            from src.domain.news.feed.model import FeedRecord
 
             project_root = Path(__file__).resolve().parents[4]
             if not fs.exists(str(project_root)):
@@ -210,18 +134,23 @@ class Tests:
             os.environ["FEED_DATABASE_URL"] = f"sqlite:///{db_path}"
             try:
                 with session_scope() as session:
+                    # 未登録IDのテスト
                     assert find_article_by_id(session, "missing") is None
 
-                    from .command import mark_fetch_failed
-
-                    mark_fetch_failed(
-                        session,
-                        feed_id="failed",
+                    # status_code != 200のテスト
+                    feed_time = datetime(2025, 9, 29, 10, 0, tzinfo=timezone.utc)
+                    failed_feed = FeedRecord(
+                        id="failed_test",
                         url="https://example.com/fail",
                         title="失敗",
-                        pub_date=datetime(2025, 9, 29, 10, 0, tzinfo=timezone.utc),
+                        pub_date=feed_time,
+                        status_code=404,
+                        created_at=feed_time,
+                        updated_at=feed_time,
                     )
+                    session.add(failed_feed)
+                    session.commit()
 
-                    assert find_article_by_id(session, "failed") is None
+                    assert find_article_by_id(session, "failed_test") is None
             finally:
                 os.environ.pop("FEED_DATABASE_URL", None)
