@@ -46,6 +46,7 @@ Python は4スペースインデント、型ヒント必須、テキストコメ
 ## RSSリンク処理の指針
 - `src/domain/news/rss_link/search.py` の `load_rss_links` は `RssItemQuery` を受け取り、group/name/path でフィルタしつつ `RssItem` のリストを返す。既定のパスはクエリの `path` デフォルト (`./links.yml`) に従う。
 - `src/domain/news/rss_link/fetch.py` の `fetch_rss_from_links` はフィルタ済みの `RssItem` リストを引数に取り、並列オプションを維持したまま `Element` のリストを返す。リンクの絞り込みは呼び出し元で行うこと。
+- `src/domain/news/rss_link/service.py` の `fetch_rss_elements_from_query` は `RssItemQuery` からリンクを読み込み、並列オプション付きで RSS ルート要素を一括取得する。通信不要なクエリの場合は空リストを返す。
 
 ## docsの更新
 issueの更新についてだが、closed下の文書についての更新は不要です。
