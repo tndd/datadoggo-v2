@@ -11,7 +11,6 @@ from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
 from infra.parse import parse_rss
 
 from .model import RssItem
-from .service import load_rss_links
 
 
 def fetch_rss_element(url: str, *, client: HttpsClient | None = None) -> Element:
@@ -27,35 +26,21 @@ def fetch_rss_element(url: str, *, client: HttpsClient | None = None) -> Element
 
 
 def fetch_rss_from_links(
-    group: str,
-    name: str | None = None,
+    items: list[RssItem],
     *,
-    links_path: str | None = None,
     client: HttpsClient | None = None,
     parallel: bool | int = False,
 ) -> list[Element]:
-    """links.yml の定義から対象リンクを選び RSS を取得する"""
+    """RssItem の一覧を受け取り RSS のルート要素を取得する"""
 
-    target_path = links_path or "./links.yml"
-    rss_items: list[RssItem] = load_rss_links(target_path)
+    if not items:
+        return []
 
-    matched_group = [item for item in rss_items if item.group == group]
-    if not matched_group:
-        raise ValueError(f"指定したグループが見つかりません: group={group}")
-
-    filtered = matched_group
-    if name:
-        filtered = [item for item in matched_group if item.name == name]
-        if not filtered:
-            raise ValueError(
-                f"指定したリンクが見つかりません: group={group}, name={name}"
-            )
-
-    worker_count = _normalize_parallel(parallel, len(filtered))
+    worker_count = _normalize_parallel(parallel, len(items))
     if worker_count <= 1:
-        return [fetch_rss_element(item.url, client=client) for item in filtered]
+        return [fetch_rss_element(item.url, client=client) for item in items]
 
-    results: list[Element | None] = [None] * len(filtered)
+    results: list[Element | None] = [None] * len(items)
 
     def make_client() -> HttpsClient | None:
         if client is None:
@@ -69,7 +54,7 @@ def fetch_rss_from_links(
                 rss_item.url,
                 client=make_client(),
             ): index
-            for index, rss_item in enumerate(filtered)
+            for index, rss_item in enumerate(items)
         }
 
         for future in as_completed(futures):
@@ -167,26 +152,15 @@ class Tests:
                 fetch_rss_element("https://example.com/rss", client=client)
 
     class Test_fetch_rss_from_links:
-        def test_fetch_rss_from_links_returns_all_group_links(self, tmp_path) -> None:
+        def test_fetch_rss_from_links_fetches_each_item(self) -> None:
             """
             docs:
                 目的:
-                    links.yml から指定グループのリンクを抽出し
-                    それぞれの RSS を取得できることを確認する。
+                    渡された RssItem ごとに RSS を取得できることを確認する。
                 検証観点:
-                    - 同一グループに複数リンクがある場合も全件取得する。
-                    - 取得した Element からタイトル情報が読める。
+                    - 全ての URL へアクセスが発生する。
+                    - 戻り値の Element からタイトルを読み取れる。
             """
-
-            yaml_path = tmp_path / "links.yml"
-            yaml_path.write_text(
-                """
-sample:
-  headline: https://example.com/rss
-  latest: https://example.com/rss-2
-""".strip(),
-                encoding="utf-8",
-            )
 
             rss_payloads = {
                 "https://example.com/rss": (
@@ -219,89 +193,30 @@ sample:
 
             client = HttpsClient(fetcher=mock_fetcher)
 
-            roots = fetch_rss_from_links(
-                "sample", links_path=str(yaml_path), client=client
-            )
+            items = [
+                RssItem(group="sample", name="headline", url="https://example.com/rss"),
+                RssItem(group="sample", name="latest", url="https://example.com/rss-2"),
+            ]
+
+            roots = fetch_rss_from_links(items, client=client)
 
             assert set(fetched_urls) == set(rss_payloads)
             assert len(roots) == len(rss_payloads)
             titles = {element.findtext("channel/title") for element in roots}
             assert titles == {"Headline", "Latest"}
 
-        def test_fetch_rss_from_links_raises_when_not_found(self, tmp_path) -> None:
+        def test_fetch_rss_from_links_returns_empty_on_no_items(self) -> None:
             """
             docs:
-                目的:
-                    指定した group/name に一致するリンクが存在しない場合に
-                    例外が発生することを確認する。
+                目的: 取得対象が存在しない場合でも例外なく空リストを返すことを確認する。
                 検証観点:
-                    - 一致無しで ValueError が送出される。
+                    - 空リスト入力で空リストが返る。
             """
 
-            yaml_path = tmp_path / "links.yml"
-            yaml_path.write_text(
-                """
-sample:
-  headline: https://example.com/rss
-""".strip(),
-                encoding="utf-8",
-            )
+            roots = fetch_rss_from_links([])
+            assert roots == []
 
-            with pytest.raises(ValueError):
-                fetch_rss_from_links("sample", "breaking", links_path=str(yaml_path))
-
-        def test_fetch_rss_from_links_filters_by_name(self, tmp_path) -> None:
-            """
-            docs:
-                目的:
-                    name を指定した場合に該当リンクのみを取得することを確認する。
-                検証観点:
-                    - 指定した name のリンクだけが取得される。
-                    - 返却される Element は RSS ルート要素である。
-            """
-
-            yaml_path = tmp_path / "links.yml"
-            yaml_path.write_text(
-                """
-sample:
-  headline: https://example.com/rss
-  latest: https://example.com/rss-2
-""".strip(),
-                encoding="utf-8",
-            )
-
-            def mock_fetcher(
-                method: str,
-                url: str,
-                headers: dict[str, str],
-                data: bytes | None,
-                timeout: float,
-            ) -> HttpResponse:
-                assert url == "https://example.com/rss-2"
-                return HttpResponse(
-                    url=url,
-                    method=method,
-                    status_code=HTTP_STATUS_OK,
-                    headers={},
-                    body=(
-                        b"<rss version='2.0'><channel>"
-                        b"<title>OnlyLatest</title></channel></rss>"
-                    ),
-                    encoding="utf-8",
-                )
-
-            client = HttpsClient(fetcher=mock_fetcher)
-
-            roots = fetch_rss_from_links(
-                "sample", "latest", links_path=str(yaml_path), client=client
-            )
-
-            assert len(roots) == 1
-            element = roots[0]
-            assert isinstance(element, Element)
-            assert element.findtext("channel/title") == "OnlyLatest"
-
-        def test_fetch_rss_from_links_runs_in_parallel(self, tmp_path) -> None:
+        def test_fetch_rss_from_links_runs_in_parallel(self) -> None:
             """
             docs:
                 目的:
@@ -313,16 +228,6 @@ sample:
 
             import threading
             import time
-
-            yaml_path = tmp_path / "links.yml"
-            yaml_path.write_text(
-                """
-sample:
-  headline: https://example.com/rss
-  latest: https://example.com/rss-2
-""".strip(),
-                encoding="utf-8",
-            )
 
             rss_payloads = {
                 "https://example.com/rss": (
@@ -358,9 +263,13 @@ sample:
 
             client = HttpsClient(fetcher=mock_fetcher)
 
+            items = [
+                RssItem(group="sample", name="headline", url="https://example.com/rss"),
+                RssItem(group="sample", name="latest", url="https://example.com/rss-2"),
+            ]
+
             roots = fetch_rss_from_links(
-                "sample",
-                links_path=str(yaml_path),
+                items,
                 client=client,
                 parallel=True,
             )

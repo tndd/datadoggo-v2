@@ -12,32 +12,20 @@
 
 | name        | type       | description                                   |
 | ----------- | ---------- | --------------------------------------------- |
-| id          | text(PK)   | URLのhash。Bucket.idとjoinされる              |
-| bucket_id   | text       | 元となったRssBucketのID                       |
+| id          | text(PK)   | URLのhash                                     |
 | url         | text       | 記事のURL                                     |
 | title       | text       | 記事のタイトル                                |
 | status_code | int?       | HTTPステータスコード                          |
 | pub_date    | timestampz | 記事の公開日時。ニュースという特性上UTCを使う |
+| created_at  | timestampz | レコードの生成日時(UTC)                       |
+| updated_at  | timestampz | レコードの最終更新日時(UTC)                   |
 
 ## rss_link
 
-### RssBucket
-links.yml 由来の RSS フィードをバケットへ保存した際のメタデータを保持する。
-
-| name           | type       | description                                                  |
-| -------------- | ---------- | ------------------------------------------------------------ |
-| id             | text(PK)   | バケットキー (SHA256)。`save_rss_element_to_bucket` の戻り値 |
-| group          | text       | links.yml のグループ名                                       |
-| name           | text       | links.yml のエントリ名                                       |
-| url            | text       | RSS フィードの取得先 URL                                     |
-| status         | text       | `RssBucketStatus`。`pending/registered/overridden/error`     |
-| saved_at       | timestampz | 保存日時(UTC)                                                |
-| content_length | int?       | 保存した RSS XML のバイト長                                  |
-
-#### Todo
-- [ ] content_lengthの削除
-- [ ] updated_atの追加
-- [ ] RssBucketMetadataへの改名
+### RssItem
+links.yml に定義された RSS フィードのエントリ。
+- グループ名・リンク名・URL のみを保持するシンプルな構造。
+- 取得した RSS XML はバケットへ保存せず、そのまま Feed テーブルへ変換して保存する。
 
 ## article
 
@@ -56,7 +44,7 @@ Articleの記事内容のバケットのメタデータ
 **補足:**
 - デフォルトでは `sqlite:///data/datadoggo.db` に保存する。
 - 環境変数 `FEED_DATABASE_URL` で接続先を切り替え可能。
-- `store_rss_bucket_payload` がバケット保存とメタデータ upsert を同時に行う。
+- RSS 取得時に XML をバケットへ保存するステップは廃止し、パース結果を直に Feed テーブルへ永続化する。
 
 # ドメインモデル
 
@@ -99,17 +87,11 @@ fetchしてきたものをクラスとして表現することを目的として
 - ArtileLink -> ArticleContent
   - fetch_article_content(url: str) -> ArticleContent
   - store_article_content(article_content: ArticleContent) -> None
-- RSS バケットメタデータ
-  - store_rss_bucket_payload(rss_item: RssItem, element: Element) -> RssBucketItem
-
 ## データ取得
 - ArticleUrlStatus
   - search_article_url_status(query: ArticleUrlQuery) -> ArticleUrlStatus[list]
 - Article
   - search_article(query: ArticleQuery) -> Article[list]
-- RSS Bucket
-  - find_rss_bucket_by_id(bucket_id: str) -> RssBucketItem | None
-  - search_rss_buckets(query: RssBucketQuery) -> list[RssBucketItem]
 
 ## ワークフロー
 - feeds.ymlを元にArticleLinkを取得しDBに保存する

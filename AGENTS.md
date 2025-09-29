@@ -35,9 +35,18 @@ Python は4スペースインデント、型ヒント必須、テキストコメ
 ## 環境設定とセキュリティ
 ニュースフィードDBは環境変数 `FEED_DATABASE_URL` で切り替えられ、未設定時は `sqlite:///data/datadoggo.db` を利用します。資格情報やトークンは `.env` などの秘匿ファイルに保存し、リポジトリにはコミットしないでください。外部サービスとの通信が必要なテストはオンライン専用マーカーで隔離し、誤って本番エンドポイントへ負荷を掛けないよう注意します。
 
+## データベース更新時の注意
+- RSS フィードはバケットを介さず直接 `feed_item` テーブルへ保存する。`bucket_id` カラムは廃止され、`created_at` / `updated_at` を UTC で保持する。
+- スキーマ変更を反映する際は、開発環境で `data/datadoggo.db` を削除した上で `initialize_database()` を再実行し、新しいカラム定義でテーブルを作り直す。
+
 ## エージェント作業時のヒント
 スクリプト実行前に既存プロセスの有無を確認し、依存追加は必ず `uv add` を用いて `pyproject.toml` と `uv.lock` を同期させます。命名リネームを行う場合は、関連コメント・テスト名まで一貫して更新してください。問題調査が必要な場合は英語クエリでウェブ検索し、信頼できるドキュメントを参照した上で実装へ反映します。
 依存追加は必ず `uv add` を用い、必要に応じて `just sync` で環境を再構築します。命名リネームを行う場合は、関連コメント・テスト名まで一貫して更新してください。問題調査が必要な場合は英語クエリでウェブ検索し、信頼できるドキュメントを参照した上で実装へ反映します。
+
+## RSSリンク処理の指針
+- `src/domain/news/rss_link/search.py` の `load_rss_links` は `RssItemQuery` を受け取り、group/name/path でフィルタしつつ `RssItem` のリストを返す。既定のパスはクエリの `path` デフォルト (`./links.yml`) に従う。
+- `src/domain/news/rss_link/fetch.py` の `fetch_rss_from_links` はフィルタ済みの `RssItem` リストを引数に取り、並列オプションを維持したまま `Element` のリストを返す。リンクの絞り込みは呼び出し元で行うこと。
+- `src/domain/news/rss_link/service.py` の `fetch_rss_elements_from_query` は `RssItemQuery` からリンクを読み込み、並列オプション付きで RSS ルート要素を一括取得する。通信不要なクエリの場合は空リストを返す。
 
 ## docsの更新
 issueの更新についてだが、closed下の文書についての更新は不要です。
