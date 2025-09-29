@@ -4,13 +4,8 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, ClassVar
 
 from pydantic import BaseModel, HttpUrl
-from sqlmodel import Field as SQLField
-from sqlmodel import SQLModel
-
-from src.domain.news.common import ensure_http_url, ensure_saved_at
 
 
 class ArticleFetchStatus(str, Enum):

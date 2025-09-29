@@ -10,6 +10,9 @@ from src.domain.news.feed.model import FeedRecord
 
 from .model import Article
 
+# HTTPステータスコード
+HTTP_OK = 200
+
 
 def find_article_by_id(session: Session, feed_id: str) -> Article | None:
     """保存済みArticleを取得する。Feedテーブルからメタデータを取得し、バケットからHTMLを取得"""
@@ -21,7 +24,7 @@ def find_article_by_id(session: Session, feed_id: str) -> Article | None:
         return None
 
     # status_codeが200以外の場合、取得失敗と判定
-    if feed_record.status_code != 200:
+    if feed_record.status_code != HTTP_OK:
         return None
 
     # バケットからHTMLコンテンツを取得
