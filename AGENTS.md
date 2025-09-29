@@ -49,10 +49,10 @@ Python は4スペースインデント、型ヒント必須、テキストコメ
 - `src/domain/news/rss_link/service.py` の `fetch_rss_elements_from_query` は `RssItemQuery` からリンクを読み込み、並列オプション付きで RSS ルート要素を一括取得する。通信不要なクエリの場合は空リストを返す。
 
 ## Article機能の実装ガイド
-- ドメイン構成は `fetch.py`（HTML取得で `ArticleContent` を生成）、`command.py`（バケット保存と `ArticleBucketMetadata` 永続化）、`search.py`（メタデータ検索と `Article` 再構築）の三層で分担する。
-- `save_article_content` / `mark_fetch_failed` は `Session` を受け取る想定。利用前に `infra.storage.rds.initialize_database()` が走るため、外部からの事前呼び出しは不要。
+- ドメイン構成は `fetch.py`（HTML取得で `Article` を生成）、`command.py`（バケット保存）、`search.py`（`Article` 再構築）のシンプルな三層構成。
+- `save_article_content` は `Article` を受け取り、HTMLをバケットに保存。DBへのメタデータ保存は廃止。
 - バケットキーは Feed のハッシュIDそのものを使用し、保存先は `data/bucket/article/<shard>/` 配下。テストでは `pyfakefs` の `fs` フィクスチャで仮想化する。
-- `ArticleSearchQuery` で `statuses` を指定すると `ArticleBucketMetadataRecord` の `status` で絞り込める。`find_article_by_id` は保存済み (`status=saved`) の記事のみを返し、HTMLを `load_object(..., as_text=True)` で復元する。
+- `find_article_by_id` は `FeedRecord` からメタデータを取得し、バケットからHTMLを取得して `Article` を再構築する。`status_code` が200以外の場合は `None` を返す。
 
 ## docsの更新
 issueの更新についてだが、closed下の文書についての更新は不要です。
