@@ -36,13 +36,15 @@ class Tests:
 
             yaml_path = tmp_path / "links.yml"
             yaml_path.write_text(
-                """
-                sample:
-                headline: https://example.com/rss
-                latest: https://example.com/rss-2
-                other:
-                daily: https://example.com/rss-3
-                """.strip(),
+                "\n".join(
+                    [
+                        "sample:",
+                        "  headline: https://example.com/rss",
+                        "  latest: https://example.com/rss-2",
+                        "other:",
+                        "  daily: https://example.com/rss-3",
+                    ]
+                ),
                 encoding="utf-8",
             )
 
