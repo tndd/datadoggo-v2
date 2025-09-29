@@ -5,6 +5,7 @@ from __future__ import annotations
 from sqlmodel import Session, select
 
 from infra.storage.bucket import load_object
+from src.domain.news.common import ensure_http_url
 from src.domain.news.feed.model import FeedRecord
 
 from .model import Article
@@ -31,8 +32,6 @@ def find_article_by_id(session: Session, feed_id: str) -> Article | None:
     )
     if not html_content or not isinstance(html_content, str):
         return None
-
-    from src.domain.news.common import ensure_http_url
 
     return Article(
         id=feed_record.id,
@@ -72,10 +71,18 @@ class Tests:
 
             if not fs.exists("/tmp"):
                 fs.create_dir("/tmp")
-            db_path = Path("/tmp/article-search-find.db")
-            os.environ["FEED_DATABASE_URL"] = f"sqlite:///{db_path}"
+            # インメモリDBを使用して毎回クリーンな状態から開始
+            os.environ["FEED_DATABASE_URL"] = "sqlite:///:memory:"
             try:
-                with session_scope() as session:
+                from infra.storage.rds import create_sqlite_engine
+
+                # インメモリDBのエンジンを作成
+                engine = create_sqlite_engine("sqlite:///:memory:")
+
+                # FeedRecordのテーブルを明示的に作成
+                FeedRecord.metadata.create_all(engine)
+
+                with session_scope(engine) as session:
                     # Feedレコードを作成
                     feed_time = datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc)
                     feed_record = FeedRecord(
@@ -130,10 +137,18 @@ class Tests:
 
             if not fs.exists("/tmp"):
                 fs.create_dir("/tmp")
-            db_path = Path("/tmp/article-search-missing.db")
-            os.environ["FEED_DATABASE_URL"] = f"sqlite:///{db_path}"
+            # インメモリDBを使用して毎回クリーンな状態から開始
+            os.environ["FEED_DATABASE_URL"] = "sqlite:///:memory:"
             try:
-                with session_scope() as session:
+                from infra.storage.rds import create_sqlite_engine
+
+                # インメモリDBのエンジンを作成
+                engine = create_sqlite_engine("sqlite:///:memory:")
+
+                # FeedRecordのテーブルを明示的に作成
+                FeedRecord.metadata.create_all(engine)
+
+                with session_scope(engine) as session:
                     # 未登録IDのテスト
                     assert find_article_by_id(session, "missing") is None
 
