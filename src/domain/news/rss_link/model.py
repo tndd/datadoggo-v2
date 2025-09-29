@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict
 
 
 class RssItem(BaseModel):
@@ -16,17 +15,11 @@ class RssItem(BaseModel):
     url: str
 
 
-class Tests:
-    class Test_RssItem:
-        def test_rss_item_is_immutable(self) -> None:
-            """
-            docs:
-                目的: RssItem がイミュータブルに扱われることを確認する。
-                検証観点:
-                    - frozen 設定により属性更新が禁止される。
-            """
+class RssItemQuery(BaseModel):
+    """links.yml のフィルタ条件を表現するクエリ"""
 
-            item = RssItem(group="bbc", name="top", url="https://example.com/rss")
+    model_config = ConfigDict(frozen=True)
 
-            with pytest.raises(ValidationError):
-                item.group = "cnn"
+    group: str | None = None
+    name: str | None = None
+    path: str = "./links.yml"

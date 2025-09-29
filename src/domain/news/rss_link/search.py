@@ -2,22 +2,11 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
 from yaml import YAMLError, safe_load
 
 from src.infra.storage.file import load_file
 
-from .model import RssItem
-
-
-class RssItemQuery(BaseModel):
-    """links.yml のフィルタ条件を表現するクエリ"""
-
-    model_config = ConfigDict(frozen=True)
-
-    group: str | None = None
-    name: str | None = None
-    path: str = "./links.yml"
+from .model import RssItem, RssItemQuery
 
 
 def load_rss_links(query: RssItemQuery | None = None) -> list[RssItem]:
