@@ -82,7 +82,7 @@ class Tests:
             検証観点:
                 - store_feed で保存したIDを指定すると FeedItem が返る。
                 - 取得した FeedItem の属性が保存時と一致する。
-                - bucket_id が保存時の値で保持される。
+                - created_at / updated_at が取得結果でも保持される。
         """
 
         from .command import store_feed
@@ -94,17 +94,17 @@ class Tests:
             feed = create_feed(
                 url="https://example.com/find",
                 title="Find Target",
-                bucket_id="bucket-find",
                 status_code=200,
                 pub_date=datetime(2024, 2, 1, 8, 0, 0),
             )
-            store_feed(feed)
+            stored = store_feed(feed)
 
             fetched = find_feed_by_id(feed.id)
             assert fetched is not None
             assert fetched.id == feed.id
             assert fetched.title == "Find Target"
-            assert fetched.bucket_id == "bucket-find"
+            assert fetched.created_at == stored.created_at
+            assert fetched.updated_at == stored.updated_at
         finally:
             os.environ.pop("FEED_DATABASE_URL", None)
 
@@ -147,21 +147,18 @@ class Tests:
             feed_success = create_feed(
                 url="https://example.com/success",
                 title="Daily Success Report",
-                bucket_id="bucket-success",
                 status_code=200,
                 pub_date=datetime(2024, 1, 10, 8, 0, 0),
             )
             feed_failure = create_feed(
                 url="https://example.com/failure",
                 title="Weekly Failure Recap",
-                bucket_id="bucket-failure",
                 status_code=500,
                 pub_date=datetime(2024, 1, 5, 8, 0, 0),
             )
             feed_other = create_feed(
                 url="https://example.org/other",
                 title="Daily Other News",
-                bucket_id="bucket-other",
                 status_code=200,
                 pub_date=datetime(2024, 1, 12, 12, 0, 0),
             )

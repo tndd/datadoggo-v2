@@ -16,7 +16,7 @@ from infra.compute import hash_text_sha256
 from infra.logging import get_logger
 from infra.parse import parse_rss
 
-from ..common import ensure_http_url
+from ..common import ensure_http_url, ensure_saved_at
 from .model import FeedItem, FeedRecord
 
 DEFAULT_FEED_STATUS_CODE = None
@@ -24,22 +24,27 @@ _log = get_logger()
 
 
 def create_feed(
+    *,
     url: str,
     title: str,
-    bucket_id: str,
     status_code: int | None,
     pub_date: datetime,
+    created_at: datetime | None = None,
 ) -> FeedItem:
     """入力値からFeedドメインモデルを生成する"""
 
     feed_id = hash_text_sha256(url)
+    normalized_created_at = ensure_saved_at(created_at)
+    normalized_updated_at = normalized_created_at
+
     return FeedItem(
         id=feed_id,
         url=ensure_http_url(url),
         title=title,
-        bucket_id=bucket_id,
         status_code=status_code,
         pub_date=pub_date,
+        created_at=normalized_created_at,
+        updated_at=normalized_updated_at,
     )
 
 
@@ -52,7 +57,8 @@ def feed_to_record(feed: FeedItem) -> FeedRecord:
         title=feed.title,
         status_code=feed.status_code,
         pub_date=feed.pub_date,
-        bucket_id=feed.bucket_id,
+        created_at=feed.created_at,
+        updated_at=feed.updated_at,
     )
 
 
@@ -65,14 +71,15 @@ def record_to_feed(record: FeedRecord) -> FeedItem:
         title=record.title,
         status_code=record.status_code,
         pub_date=record.pub_date,
-        bucket_id=record.bucket_id,
+        created_at=ensure_saved_at(record.created_at),
+        updated_at=ensure_saved_at(record.updated_at),
     )
 
 
 def convert_rss_items_to_feed_items(
     root: Element,
     *,
-    bucket_id: str,
+    source_label: str,
     default_status_code: int | None = DEFAULT_FEED_STATUS_CODE,
 ) -> list[FeedItem]:
     """RSSのitem要素をFeedItemリストに変換する"""
@@ -97,7 +104,6 @@ def convert_rss_items_to_feed_items(
                 create_feed(
                     url=link,
                     title=title,
-                    bucket_id=bucket_id,
                     status_code=default_status_code,
                     pub_date=pub_date,
                 )
@@ -105,7 +111,7 @@ def convert_rss_items_to_feed_items(
         except (ValueError, ValidationError) as exc:
             _log.warning(
                 "invalid feed item skipped",
-                bucket_id=bucket_id,
+                rss_source=source_label,
                 feed_url=link,
                 error_type=type(exc).__name__,
                 exception_message=str(exc),
@@ -186,14 +192,14 @@ class Tests:
             検証観点:
                 - item要素からFeedItemが生成される。
                 - pubDateがUTCのdatetimeに変換される。
-                - bucket_id が指定値で保持される。
+                - created_at と updated_at がUTCタイムゾーンで付与される。
         """
 
         fixture_path = Path(__file__).resolve().parents[4] / "mock" / "google_news.rss"
         content = fixture_path.read_bytes()
         root = parse_rss(content)
 
-        items = convert_rss_items_to_feed_items(root, bucket_id="rss-bucket-1")
+        items = convert_rss_items_to_feed_items(root, source_label="mock:google")
 
         assert items, "FeedItemが1件以上生成されること"
         first = items[0]
@@ -202,7 +208,8 @@ class Tests:
         expected_datetime = datetime(2025, 9, 24, 11, 52, 38, tzinfo=timezone.utc)
         assert first.pub_date == expected_datetime
         assert first.status_code is DEFAULT_FEED_STATUS_CODE
-        assert first.bucket_id == "rss-bucket-1"
+        assert first.created_at.tzinfo is not None
+        assert first.updated_at.tzinfo is not None
 
     def test_convert_rss_items_to_feed_items_skips_incomplete_item(self) -> None:
         """
@@ -231,7 +238,7 @@ class Tests:
         """
         root = parse_rss(rss_xml)
 
-        items = convert_rss_items_to_feed_items(root, bucket_id="rss-bucket-2")
+        items = convert_rss_items_to_feed_items(root, source_label="mock:missing")
 
         assert len(items) == 1
         assert str(items[0].url) == "https://example.com/valid"
@@ -265,13 +272,12 @@ class Tests:
         """
         root = parse_rss(rss_xml)
 
-        items = convert_rss_items_to_feed_items(root, bucket_id="rss-bucket-4")
+        items = convert_rss_items_to_feed_items(root, source_label="mock:invalid")
 
         assert len(items) == 1
         first = items[0]
         assert first.title == "Valid URL"
         assert str(first.url) == "https://example.com/article"
-        assert first.bucket_id == "rss-bucket-4"
 
     def test_convert_rss_items_to_feed_items_logs_invalid_http_url(
         self,
@@ -283,7 +289,7 @@ class Tests:
                 不正URLを含むitemをスキップした際にログへ詳細が出力されることを確認する。
             検証観点:
                 - ログファイルが生成され、メッセージがJSONで出力される。
-                - ログのextraにbucket_idとfeed_urlが含まれる。
+                - ログのextraにrss_sourceとfeed_urlが含まれる。
         """
 
         rss_xml = """
@@ -299,7 +305,7 @@ class Tests:
         """
         root = parse_rss(rss_xml)
 
-        items = convert_rss_items_to_feed_items(root, bucket_id="rss-bucket-5")
+        items = convert_rss_items_to_feed_items(root, source_label="mock:logging")
 
         assert not items
 
@@ -312,7 +318,7 @@ class Tests:
         record = payload["record"]
         assert record["message"] == "invalid feed item skipped"
         extra = record["extra"]
-        assert extra["bucket_id"] == "rss-bucket-5"
+        assert extra["rss_source"] == "mock:logging"
         assert extra["feed_url"] == "notaurl"
 
     def test_convert_rss_items_to_feed_items_raises_without_channel(self) -> None:
@@ -327,4 +333,4 @@ class Tests:
         root = ET.fromstring("<rss version='2.0'></rss>")
 
         with pytest.raises(ValueError):
-            convert_rss_items_to_feed_items(root, bucket_id="rss-bucket-3")
+            convert_rss_items_to_feed_items(root, source_label="mock:none")
