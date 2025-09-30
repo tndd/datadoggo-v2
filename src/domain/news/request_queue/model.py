@@ -35,7 +35,7 @@ class HttpRequest(BaseModel):
 class HttpRequestRecord(SQLModel, table=True):
     """SQLModelによるHttpRequestテーブル定義"""
 
-    __tablename__: ClassVar[Any] = "http_request"
+    __tablename__: ClassVar[Any] = "http_request_queue"
 
     id: str = SQLField(primary_key=True, index=True)
     url: str = SQLField(nullable=False)
