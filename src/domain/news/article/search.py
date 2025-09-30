@@ -113,7 +113,9 @@ class Tests:
                 assert retrieved is not None
                 assert retrieved.html_content == "<html>article</html>"
 
-        def test_find_article_by_id_returns_none_when_missing(self, fs, test_db_env) -> None:
+        def test_find_article_by_id_returns_none_when_missing(
+            self, fs, test_db_env
+        ) -> None:
             """
             docs:
                 目的: 未保存IDでは None が返ることを確認する。
