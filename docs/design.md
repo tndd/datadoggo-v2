@@ -1,7 +1,6 @@
 # テーブル定義
 - Option指定なき場合、NOT NULL制約とする。
 - デフォルトでは`sqlite:///data/datadoggo.db`に保存する。
-- 環境変数`FEED_DATABASE_URL`を設定すると接続先を切り替えられる。
 - テーブル初期化はアプリケーション起動時に`initialize_database()`で行う。
 
 ## feed

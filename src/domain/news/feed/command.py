@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import os
-import shutil
 from datetime import datetime
-from pathlib import Path
 
 from sqlmodel import select
 
@@ -65,35 +62,3 @@ class Tests:
             assert record.title == "Store Feed"
             assert ensure_saved_at(record.created_at) == stored.created_at
             assert ensure_saved_at(record.updated_at) == stored.updated_at
-
-    def test_store_feed_creates_database_directory(self) -> None:
-        """
-        docs:
-            目的:
-                SQLiteファイル保存時に親ディレクトリが自動生成されることを確認する。
-            検証観点:
-                - 未作成ディレクトリでも store_feed が成功する。
-                - 処理後にディレクトリとファイルが存在する。
-        """
-
-        target_dir = Path("tmp-feed-storage")
-        target_db = target_dir / "test.db"
-        if target_dir.exists():
-            shutil.rmtree(target_dir)
-
-        os.environ["FEED_DATABASE_URL"] = f"sqlite:///{target_db}"
-        try:
-            feed = create_feed(
-                url="https://example.com/new",
-                title="New Entry",
-                status_code=200,
-                pub_date=datetime(2024, 1, 15, 9, 0, 0),
-            )
-            store_feed(feed)
-
-            assert target_dir.exists()
-            assert target_db.exists()
-        finally:
-            os.environ.pop("FEED_DATABASE_URL", None)
-            if target_dir.exists():
-                shutil.rmtree(target_dir)

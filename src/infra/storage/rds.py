@@ -1,6 +1,5 @@
 """RDS(SQLite)接続まわりのユーティリティ関数群"""
 
-import os
 import sys
 from collections.abc import Callable
 from contextlib import contextmanager
@@ -13,7 +12,6 @@ from sqlmodel import Session, SQLModel, create_engine
 from infra.logging import get_logger
 
 DEFAULT_DATABASE_URL = "sqlite:///data/datadoggo.db"
-DATABASE_ENV_VAR = "FEED_DATABASE_URL"
 
 LOG = get_logger()
 
@@ -25,18 +23,10 @@ def get_database_url() -> str:
     """
     データベースURLを取得する
 
-    優先順位:
-    1. 環境変数FEED_DATABASE_URL（明示的に指定された場合）
-    2. pytest実行時: インメモリDB
-    3. それ以外: 本番DB
+    - pytest実行時: インメモリDB
+    - それ以外: 本番DB (data/datadoggo.db)
     """
 
-    # 環境変数が明示的に設定されている場合はそれを優先
-    env_url = os.getenv(DATABASE_ENV_VAR)
-    if env_url is not None:
-        return env_url
-
-    # pytest実行時はデフォルトでインメモリDB
     if "pytest" in sys.modules:
         return "sqlite:///:memory:"
 
@@ -125,3 +115,23 @@ def _ensure_sqlite_directory(database_url: str) -> None:
         db_path = Path.cwd() / db_path
 
     db_path.parent.mkdir(parents=True, exist_ok=True)
+
+
+class Tests:
+    def test_ensure_sqlite_directory_creates_parent(self, fs) -> None:
+        """
+        docs:
+            目的:
+                SQLiteファイル保存時に親ディレクトリが自動生成されることを確認する。
+            検証観点:
+                - _ensure_sqlite_directory が存在しないディレクトリを作成する。
+                - 相対パスも絶対パスも正しく処理される。
+        """
+
+        # 絶対パス
+        _ensure_sqlite_directory("sqlite:////test/dir/test.db")
+        assert fs.exists("/test/dir")
+
+        # 相対パス（カレントディレクトリ基準）
+        _ensure_sqlite_directory("sqlite:///relative/path/test.db")
+        assert fs.exists("relative/path")
