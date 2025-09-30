@@ -12,13 +12,13 @@ from sqlmodel import SQLModel
 SUCCESS_STATUS_CODE = 200
 
 
-class FeedItem(BaseModel):
-    """Feedテーブルの要素のドメイン表現"""
+class HttpRequest(BaseModel):
+    """HttpRequestテーブルの要素のドメイン表現"""
 
     id: str
     url: HttpUrl
-    title: str
-    pub_date: datetime
+    description: str | None
+    group: str
     status_code: int | None = None
     created_at: datetime
     updated_at: datetime
@@ -32,16 +32,16 @@ class FeedItem(BaseModel):
         return self.status_code is not SUCCESS_STATUS_CODE
 
 
-class FeedRecord(SQLModel, table=True):
-    """SQLModelによるFeedテーブル定義"""
+class HttpRequestRecord(SQLModel, table=True):
+    """SQLModelによるHttpRequestテーブル定義"""
 
-    __tablename__: ClassVar[Any] = "feed_item"
+    __tablename__: ClassVar[Any] = "http_request"
 
     id: str = SQLField(primary_key=True, index=True)
     url: str = SQLField(nullable=False)
-    title: str = SQLField(nullable=False)
+    description: str | None = SQLField(default=None, nullable=True)
+    group: str = SQLField(nullable=False)
     status_code: int | None = SQLField(default=None, nullable=True)
-    pub_date: datetime = SQLField(nullable=False)
     created_at: datetime = SQLField(nullable=False)
     updated_at: datetime = SQLField(nullable=False)
 
@@ -69,11 +69,11 @@ class TestMod:
 
         url_value = cast(HttpUrl, "https://example.com/rss")
 
-        success = FeedItem(
+        success = HttpRequest(
             id="abc",
             url=url_value,
-            title="example",
-            pub_date=base_time,
+            description="example",
+            group="test:source",
             status_code=SUCCESS_STATUS_CODE,
             created_at=base_time,
             updated_at=base_time,
