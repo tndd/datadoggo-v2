@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
 from sqlmodel import Session, col, select
 
-from infra.storage.bucket import load_object
+from infra.storage.bucket import load_object, load_objects
 from src.domain.news.common import ensure_http_url
 from src.domain.news.feed.model import FeedRecord
 
@@ -67,89 +65,39 @@ def search_articles_by_ids(
         record.id: record for record in feed_records if record.status_code == HTTP_OK
     }
 
-    if not valid_records:
-        return {}
-
-    # 並列度の決定
-    worker_count = _normalize_parallel(parallel, len(valid_records))
-
     # バケットからHTMLを並列取得
-    if worker_count <= 1:
-        # 逐次実行
-        results: dict[str, Article | None] = {}
-        for feed_id in feed_ids:
-            # valid_recordsに含まれない場合はNone
-            if feed_id not in valid_records:
-                results[feed_id] = None
-                continue
+    html_contents = load_objects(
+        bucket_name="article",
+        object_keys=feed_ids,
+        parallel=parallel,
+        as_text=True,
+    )
 
-            record = valid_records[feed_id]
-            html_content = load_object(
-                bucket_name="article", object_key=feed_id, as_text=True
-            )
-            if html_content and isinstance(html_content, str):
-                results[feed_id] = Article(
-                    id=record.id,
-                    url=ensure_http_url(record.url),
-                    title=record.title,
-                    pub_date=record.pub_date,
-                    html_content=html_content,
-                )
-            else:
-                results[feed_id] = None
-        return results
-
-    # 並列実行
-    results_dict: dict[str, Article | None] = {}
-
-    # 先にすべてのfeed_idをNoneで初期化
+    # Articleを構築
+    results: dict[str, Article | None] = {}
     for feed_id in feed_ids:
-        results_dict[feed_id] = None
+        # valid_recordsに含まれない場合はNone
+        if feed_id not in valid_records:
+            results[feed_id] = None
+            continue
 
-    def load_article(feed_id: str, record: FeedRecord) -> tuple[str, Article | None]:
-        html_content = load_object(
-            bucket_name="article", object_key=feed_id, as_text=True
-        )
+        # HTMLが取得できなかった場合はNone
+        html_content = html_contents.get(feed_id, "")
         if not html_content or not isinstance(html_content, str):
-            return (feed_id, None)
+            results[feed_id] = None
+            continue
 
-        article = Article(
+        # Article構築
+        record = valid_records[feed_id]
+        results[feed_id] = Article(
             id=record.id,
             url=ensure_http_url(record.url),
             title=record.title,
             pub_date=record.pub_date,
             html_content=html_content,
         )
-        return (feed_id, article)
 
-    with ThreadPoolExecutor(max_workers=worker_count) as executor:
-        futures = {
-            executor.submit(load_article, feed_id, record): feed_id
-            for feed_id, record in valid_records.items()
-        }
-
-        for future in as_completed(futures):
-            feed_id, article = future.result()
-            results_dict[feed_id] = article
-
-    return results_dict
-
-
-def _normalize_parallel(parallel: bool | int, item_count: int) -> int:
-    """並列実行時のワーカー数を決定する"""
-
-    if not parallel:
-        return 1
-
-    if parallel is True:
-        return max(1, item_count)
-
-    if isinstance(parallel, int):
-        if parallel <= 1:
-            return 1
-        return min(parallel, item_count)
-
-    return 1
+    return results
 
 
 class TestMod:

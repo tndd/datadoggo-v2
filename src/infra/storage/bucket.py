@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Union
 
@@ -201,6 +202,72 @@ def _to_compressed_bytes(
     return compress_text_to_zstd(payload, encoding=encoding)
 
 
+def _normalize_parallel(parallel: bool | int, item_count: int) -> int:
+    """並列実行時のワーカー数を決定する"""
+
+    if not parallel:
+        return 1
+
+    if parallel is True:
+        return max(1, item_count)
+
+    if isinstance(parallel, int):
+        if parallel <= 1:
+            return 1
+        return min(parallel, item_count)
+
+    return 1
+
+
+def load_objects(
+    bucket_name: str,
+    object_keys: list[str],
+    *,
+    parallel: bool | int = False,
+    as_text: bool = False,
+    storage_root: Path | str = DEFAULT_STORAGE_ROOT,
+) -> dict[str, Union[bytes, str]]:
+    """複数のオブジェクトを並列取得する。keyごとに成功/失敗の結果を返す"""
+
+    if not object_keys:
+        return {}
+
+    worker_count = _normalize_parallel(parallel, len(object_keys))
+
+    # 逐次実行
+    if worker_count <= 1:
+        results: dict[str, Union[bytes, str]] = {}
+        for key in object_keys:
+            results[key] = load_object(
+                bucket_name=bucket_name,
+                object_key=key,
+                storage_root=storage_root,
+                as_text=as_text,
+            )
+        return results
+
+    # 並列実行
+    results_dict: dict[str, Union[bytes, str]] = {}
+
+    def load_single(key: str) -> tuple[str, Union[bytes, str]]:
+        content = load_object(
+            bucket_name=bucket_name,
+            object_key=key,
+            storage_root=storage_root,
+            as_text=as_text,
+        )
+        return (key, content)
+
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        futures = {executor.submit(load_single, key): key for key in object_keys}
+
+        for future in as_completed(futures):
+            key, content = future.result()
+            results_dict[key] = content
+
+    return results_dict
+
+
 class TestMod:
     def test_save_and_load_text(self, fs: FakeFilesystem) -> None:
         """
@@ -305,3 +372,72 @@ class TestMod:
 
         keys = search_object_keys("objects", storage_root=storage_root)
         assert keys == []
+
+    def test_load_objects_returns_multiple_objects(self, fs: FakeFilesystem) -> None:
+        """
+        docs:
+            目的: 複数のオブジェクトを一括取得できることを確認する。
+            検証観点:
+                - 複数のkeyを指定して対応するオブジェクトが取得できる。
+                - 返り値がdict[str, Union[bytes, str]]である。
+        """
+
+        fs.create_dir("/data")
+        storage_root = Path("/data/bucket")
+
+        # 複数オブジェクトを保存
+        test_keys = ["key1", "key2", "key3"]
+        save_object("content1", "test", "key1", storage_root=storage_root)
+        save_object("content2", "test", "key2", storage_root=storage_root)
+        save_object("content3", "test", "key3", storage_root=storage_root)
+
+        # 一括取得
+        results = load_objects(
+            "test", test_keys, storage_root=storage_root, as_text=True
+        )
+
+        assert len(results) == len(test_keys)
+        assert results["key1"] == "content1"
+        assert results["key2"] == "content2"
+        assert results["key3"] == "content3"
+
+    def test_load_objects_handles_missing_keys(self, fs: FakeFilesystem) -> None:
+        """
+        docs:
+            目的: 一部のkeyが存在しない場合、空文字列が返ることを確認する。
+            検証観点:
+                - 存在しないkeyには空文字列（as_text=True時）が設定される。
+                - 存在するkeyは正常に取得できる。
+        """
+
+        fs.create_dir("/data")
+        storage_root = Path("/data/bucket")
+
+        # 一部のみ保存
+        save_object("exists", "test", "exists", storage_root=storage_root)
+
+        # 存在するkey/しないkeyを混在させて取得
+        test_keys = ["exists", "missing"]
+        results = load_objects(
+            "test", test_keys, storage_root=storage_root, as_text=True
+        )
+
+        assert len(results) == len(test_keys)
+        assert results["exists"] == "exists"
+        assert results["missing"] == ""
+
+    def test_load_objects_returns_empty_dict_for_empty_list(
+        self, fs: FakeFilesystem
+    ) -> None:
+        """
+        docs:
+            目的: 空リストを渡した場合、空dictが返ることを確認する。
+            検証観点:
+                - object_keys=[] で空dictが返る。
+        """
+
+        fs.create_dir("/data")
+        storage_root = Path("/data/bucket")
+
+        results = load_objects("test", [], storage_root=storage_root, as_text=True)
+        assert results == {}
