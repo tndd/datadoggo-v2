@@ -46,115 +46,116 @@ def find_article_by_id(session: Session, feed_id: str) -> Article | None:
 
 
 class Tests:
-    class Test_find_article_by_id:
-        def test_find_article_by_id_returns_article(self, fs) -> None:
-            """
-            docs:
-                目的: 保存済み記事を完全なArticleモデルとして取得できることを確認する。
-                検証観点:
-                    - Feedテーブル とバケット HTML から Article が復元される。
-            """
+    """このモジュールのテストコレクション"""
 
-            import os
-            from datetime import datetime, timezone
-            from pathlib import Path
-            from typing import cast
+    def test_find_article_by_id_returns_article(self, fs) -> None:
+        """
+        docs:
+            目的: 保存済み記事を完全なArticleモデルとして取得できることを確認する。
+            検証観点:
+                - Feedテーブル とバケット HTML から Article が復元される。
+        """
 
-            from pydantic import HttpUrl
+        import os
+        from datetime import datetime, timezone
+        from pathlib import Path
+        from typing import cast
 
-            from infra.storage.rds import session_scope
-            from src.domain.news.feed.model import FeedRecord
+        from pydantic import HttpUrl
 
-            from .command import save_article_content
+        from infra.storage.rds import session_scope
+        from src.domain.news.feed.model import FeedRecord
 
-            project_root = Path(__file__).resolve().parents[4]
-            if not fs.exists(str(project_root)):
-                fs.create_dir(str(project_root))
-            os.chdir(project_root)
+        from .command import save_article_content
 
-            if not fs.exists("/tmp"):
-                fs.create_dir("/tmp")
+        project_root = Path(__file__).resolve().parents[4]
+        if not fs.exists(str(project_root)):
+            fs.create_dir(str(project_root))
+        os.chdir(project_root)
 
-            from infra.storage.rds import create_sqlite_engine
+        if not fs.exists("/tmp"):
+            fs.create_dir("/tmp")
 
-            # pytestにより自動的にインメモリDBが使用される（fixtureで初期化済み）
-            engine = create_sqlite_engine()
+        from infra.storage.rds import create_sqlite_engine
 
-            with session_scope(engine) as session:
-                # Feedレコードを作成
-                feed_time = datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc)
-                feed_record = FeedRecord(
-                    id="article_test",
-                    url="https://example.com/article",
-                    title="記事",
-                    pub_date=feed_time,
-                    status_code=200,
-                    created_at=feed_time,
-                    updated_at=feed_time,
-                )
-                session.add(feed_record)
-                session.commit()
+        # pytestにより自動的にインメモリDBが使用される（fixtureで初期化済み）
+        engine = create_sqlite_engine()
 
-                # Article作成してバケット保存
-                article = Article(
-                    id="article_test",
-                    url=cast(HttpUrl, "https://example.com/article"),
-                    title="記事",
-                    pub_date=feed_time,
-                    html_content="<html>article</html>",
-                )
-                save_article_content(article)
+        with session_scope(engine) as session:
+            # Feedレコードを作成
+            feed_time = datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc)
+            feed_record = FeedRecord(
+                id="article_test",
+                url="https://example.com/article",
+                title="記事",
+                pub_date=feed_time,
+                status_code=200,
+                created_at=feed_time,
+                updated_at=feed_time,
+            )
+            session.add(feed_record)
+            session.commit()
 
-                # 取得テスト
-                retrieved = find_article_by_id(session, "article_test")
-                assert retrieved is not None
-                assert retrieved.html_content == "<html>article</html>"
+            # Article作成してバケット保存
+            article = Article(
+                id="article_test",
+                url=cast(HttpUrl, "https://example.com/article"),
+                title="記事",
+                pub_date=feed_time,
+                html_content="<html>article</html>",
+            )
+            save_article_content(article)
 
-        def test_find_article_by_id_returns_none_when_missing(self, fs) -> None:
-            """
-            docs:
-                目的: 未保存IDでは None が返ることを確認する。
-                検証観点:
-                    - メタデータ未登録時は None。
-                    - status_code が 200以外の場合も None。
-            """
+            # 取得テスト
+            retrieved = find_article_by_id(session, "article_test")
+            assert retrieved is not None
+            assert retrieved.html_content == "<html>article</html>"
 
-            import os
-            from datetime import datetime, timezone
-            from pathlib import Path
+    def test_find_article_by_id_returns_none_when_missing(self, fs) -> None:
+        """
+        docs:
+            目的: 未保存IDでは None が返ることを確認する。
+            検証観点:
+                - メタデータ未登録時は None。
+                - status_code が 200以外の場合も None。
+        """
 
-            from infra.storage.rds import session_scope
-            from src.domain.news.feed.model import FeedRecord
+        import os
+        from datetime import datetime, timezone
+        from pathlib import Path
 
-            project_root = Path(__file__).resolve().parents[4]
-            if not fs.exists(str(project_root)):
-                fs.create_dir(str(project_root))
-            os.chdir(project_root)
+        from infra.storage.rds import session_scope
+        from src.domain.news.feed.model import FeedRecord
 
-            if not fs.exists("/tmp"):
-                fs.create_dir("/tmp")
+        project_root = Path(__file__).resolve().parents[4]
+        if not fs.exists(str(project_root)):
+            fs.create_dir(str(project_root))
+        os.chdir(project_root)
 
-            from infra.storage.rds import create_sqlite_engine
+        if not fs.exists("/tmp"):
+            fs.create_dir("/tmp")
 
-            # pytestにより自動的にインメモリDBが使用される（fixtureで初期化済み）
-            engine = create_sqlite_engine()
+        from infra.storage.rds import create_sqlite_engine
 
-            with session_scope(engine) as session:
-                # 未登録IDのテスト
-                assert find_article_by_id(session, "missing") is None
+        # pytestにより自動的にインメモリDBが使用される（fixtureで初期化済み）
+        engine = create_sqlite_engine()
 
-                # status_code != 200のテスト
-                feed_time = datetime(2025, 9, 29, 10, 0, tzinfo=timezone.utc)
-                failed_feed = FeedRecord(
-                    id="failed_test",
-                    url="https://example.com/fail",
-                    title="失敗",
-                    pub_date=feed_time,
-                    status_code=404,
-                    created_at=feed_time,
-                    updated_at=feed_time,
-                )
-                session.add(failed_feed)
-                session.commit()
+        with session_scope(engine) as session:
+            # 未登録IDのテスト
+            assert find_article_by_id(session, "missing") is None
 
-                assert find_article_by_id(session, "failed_test") is None
+            # status_code != 200のテスト
+            feed_time = datetime(2025, 9, 29, 10, 0, tzinfo=timezone.utc)
+            failed_feed = FeedRecord(
+                id="failed_test",
+                url="https://example.com/fail",
+                title="失敗",
+                pub_date=feed_time,
+                status_code=404,
+                created_at=feed_time,
+                updated_at=feed_time,
+            )
+            session.add(failed_feed)
+            session.commit()
+
+            assert find_article_by_id(session, "failed_test") is None

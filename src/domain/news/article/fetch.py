@@ -63,99 +63,100 @@ def _decode_body(response: HttpResponse) -> str:
 
 
 class Tests:
-    class Test_fetch_article_content:
-        def test_fetch_article_content_returns_model_on_success(self) -> None:
-            """
-            docs:
-                目的: ステータス200の場合にArticleが生成されることを確認する。
-                検証観点:
-                    - HTML本文がデコードされる。
-                    - FeedItemの属性が引き継がれる。
-            """
+    """このモジュールのテストコレクション"""
 
-            from datetime import datetime, timezone
-            from typing import cast
+    def test_fetch_article_content_returns_model_on_success(self) -> None:
+        """
+        docs:
+            目的: ステータス200の場合にArticleが生成されることを確認する。
+            検証観点:
+                - HTML本文がデコードされる。
+                - FeedItemの属性が引き継がれる。
+        """
 
-            from pydantic import HttpUrl
+        from datetime import datetime, timezone
+        from typing import cast
 
-            html_text = "<html><body>記事</body></html>"
-            html_bytes = html_text.encode("utf-8")
+        from pydantic import HttpUrl
 
-            def mock_fetcher(
-                method: str,
-                url: str,
-                headers: dict[str, str],
-                data: bytes | None,
-                timeout: float,
-            ) -> HttpResponse:
-                return HttpResponse(
-                    url=url,
-                    method=method,
-                    status_code=HTTP_STATUS_OK,
-                    headers={},
-                    body=html_bytes,
-                    encoding="utf-8",
-                )
+        html_text = "<html><body>記事</body></html>"
+        html_bytes = html_text.encode("utf-8")
 
-            client = HttpsClient(fetcher=mock_fetcher)
-
-            feed = FeedItem(
-                id="abc",
-                url=cast(HttpUrl, "https://example.com/detail"),
-                title="テスト",
-                status_code=200,
-                pub_date=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
-                created_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
-                updated_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
+        def mock_fetcher(
+            method: str,
+            url: str,
+            headers: dict[str, str],
+            data: bytes | None,
+            timeout: float,
+        ) -> HttpResponse:
+            return HttpResponse(
+                url=url,
+                method=method,
+                status_code=HTTP_STATUS_OK,
+                headers={},
+                body=html_bytes,
+                encoding="utf-8",
             )
 
-            article = fetch_article_content(feed, client=client)
+        client = HttpsClient(fetcher=mock_fetcher)
 
-            assert article is not None
-            assert article.html_content == html_text
-            assert article.id == feed.id
+        feed = FeedItem(
+            id="abc",
+            url=cast(HttpUrl, "https://example.com/detail"),
+            title="テスト",
+            status_code=200,
+            pub_date=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
+            created_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
+            updated_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
+        )
 
-        def test_fetch_article_content_returns_none_on_error_status(self) -> None:
-            """
-            docs:
-                目的: ステータスが200以外の場合にNoneが返ることを確認する。
-                検証観点:
-                    - HTTP 404 時にNoneが返る。
-            """
+        article = fetch_article_content(feed, client=client)
 
-            from datetime import datetime, timezone
-            from typing import cast
+        assert article is not None
+        assert article.html_content == html_text
+        assert article.id == feed.id
 
-            from pydantic import HttpUrl
+    def test_fetch_article_content_returns_none_on_error_status(self) -> None:
+        """
+        docs:
+            目的: ステータスが200以外の場合にNoneが返ることを確認する。
+            検証観点:
+                - HTTP 404 時にNoneが返る。
+        """
 
-            def mock_fetcher(
-                method: str,
-                url: str,
-                headers: dict[str, str],
-                data: bytes | None,
-                timeout: float,
-            ) -> HttpResponse:
-                return HttpResponse(
-                    url=url,
-                    method=method,
-                    status_code=404,
-                    headers={},
-                    body=b"",
-                    encoding="utf-8",
-                )
+        from datetime import datetime, timezone
+        from typing import cast
 
-            client = HttpsClient(fetcher=mock_fetcher)
+        from pydantic import HttpUrl
 
-            feed = FeedItem(
-                id="abc",
-                url=cast(HttpUrl, "https://example.com/detail"),
-                title="テスト",
-                status_code=None,
-                pub_date=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
-                created_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
-                updated_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
+        def mock_fetcher(
+            method: str,
+            url: str,
+            headers: dict[str, str],
+            data: bytes | None,
+            timeout: float,
+        ) -> HttpResponse:
+            return HttpResponse(
+                url=url,
+                method=method,
+                status_code=404,
+                headers={},
+                body=b"",
+                encoding="utf-8",
             )
 
-            article = fetch_article_content(feed, client=client)
+        client = HttpsClient(fetcher=mock_fetcher)
 
-            assert article is None
+        feed = FeedItem(
+            id="abc",
+            url=cast(HttpUrl, "https://example.com/detail"),
+            title="テスト",
+            status_code=None,
+            pub_date=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
+            created_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
+            updated_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
+        )
+
+        article = fetch_article_content(feed, client=client)
+
+        assert article is None

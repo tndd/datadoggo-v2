@@ -47,37 +47,38 @@ class FeedRecord(SQLModel, table=True):
 
 
 class Tests:
-    class Test_FeedItem:
-        def test_is_success_and_backlog(self) -> None:
-            """
-            docs:
-                目的:
-                    ステータスコードに応じた成功/失敗判定を確認する。
-                検証観点:
-                    - 200 の場合 is_success が True。
-                    - 200 以外または None の場合 is_backlog が True。
-            """
+    """このモジュールのテストコレクション"""
 
-            from datetime import datetime, timezone
+    def test_is_success_and_backlog(self) -> None:
+        """
+        docs:
+            目的:
+                ステータスコードに応じた成功/失敗判定を確認する。
+            検証観点:
+                - 200 の場合 is_success が True。
+                - 200 以外または None の場合 is_backlog が True。
+        """
 
-            base_time = datetime(2025, 9, 29, 0, 0, tzinfo=timezone.utc)
+        from datetime import datetime, timezone
 
-            from typing import cast
+        base_time = datetime(2025, 9, 29, 0, 0, tzinfo=timezone.utc)
 
-            from pydantic import HttpUrl
+        from typing import cast
 
-            url_value = cast(HttpUrl, "https://example.com/rss")
+        from pydantic import HttpUrl
 
-            success = FeedItem(
-                id="abc",
-                url=url_value,
-                title="example",
-                pub_date=base_time,
-                status_code=SUCCESS_STATUS_CODE,
-                created_at=base_time,
-                updated_at=base_time,
-            )
-            assert success.is_success()
+        url_value = cast(HttpUrl, "https://example.com/rss")
 
-            backlog = success.model_copy(update={"status_code": None})
-            assert backlog.is_backlog()
+        success = FeedItem(
+            id="abc",
+            url=url_value,
+            title="example",
+            pub_date=base_time,
+            status_code=SUCCESS_STATUS_CODE,
+            created_at=base_time,
+            updated_at=base_time,
+        )
+        assert success.is_success()
+
+        backlog = success.model_copy(update={"status_code": None})
+        assert backlog.is_backlog()
