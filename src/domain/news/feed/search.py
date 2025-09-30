@@ -73,7 +73,7 @@ def search_feeds(query: FeedQuery) -> list[FeedItem]:
 
 
 class Tests:
-    def test_find_feed_by_id_returns_item(self, test_db_env) -> None:
+    def test_find_feed_by_id_returns_item(self) -> None:
         """
         docs:
             目的:
@@ -87,7 +87,7 @@ class Tests:
         from .command import store_feed
         from .service import create_feed
 
-        # test_db_envフィクスチャが環境変数を設定済み
+        # pytestにより自動的にインメモリDBが使用される
         feed = create_feed(
             url="https://example.com/find",
             title="Find Target",
@@ -103,7 +103,7 @@ class Tests:
         assert fetched.created_at == stored.created_at
         assert fetched.updated_at == stored.updated_at
 
-    def test_find_feed_by_id_returns_none_when_missing(self, test_db_env) -> None:
+    def test_find_feed_by_id_returns_none_when_missing(self) -> None:
         """
         docs:
             目的:
@@ -114,11 +114,11 @@ class Tests:
                 - 戻り値が None になる。
         """
 
-        # test_db_envフィクスチャが環境変数を設定済み
+        # pytestにより自動的にインメモリDBが使用される
         missing = find_feed_by_id("non-existent")
         assert missing is None
 
-    def test_search_feeds_filters_and_order(self, test_db_env) -> None:
+    def test_search_feeds_filters_and_order(self) -> None:
         """
         docs:
             目的:
@@ -132,7 +132,7 @@ class Tests:
         from .command import store_feed
         from .service import create_feed
 
-        # test_db_envフィクスチャが環境変数を設定済み
+        # pytestにより自動的にインメモリDBが使用される
         feed_success = create_feed(
             url="https://example.com/success",
             title="Daily Success Report",

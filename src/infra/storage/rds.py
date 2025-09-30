@@ -1,6 +1,7 @@
 """RDS(SQLite)接続まわりのユーティリティ関数群"""
 
 import os
+import sys
 from collections.abc import Callable
 from contextlib import contextmanager
 from pathlib import Path
@@ -16,17 +17,52 @@ DATABASE_ENV_VAR = "FEED_DATABASE_URL"
 
 LOG = get_logger()
 
+# pytest実行時にインメモリDBエンジンをキャッシュ（テスト内で同一インスタンスを共有）
+_test_engine: Engine | None = None
+
 
 def get_database_url() -> str:
-    """環境変数から接続URLを取得する。未設定時はデフォルトのSQLiteファイルを用いる"""
+    """
+    データベースURLを取得する
 
-    return os.getenv(DATABASE_ENV_VAR, DEFAULT_DATABASE_URL)
+    優先順位:
+    1. 環境変数FEED_DATABASE_URL（明示的に指定された場合）
+    2. pytest実行時: インメモリDB
+    3. それ以外: 本番DB
+    """
+
+    # 環境変数が明示的に設定されている場合はそれを優先
+    env_url = os.getenv(DATABASE_ENV_VAR)
+    if env_url is not None:
+        return env_url
+
+    # pytest実行時はデフォルトでインメモリDB
+    if "pytest" in sys.modules:
+        return "sqlite:///:memory:"
+
+    return DEFAULT_DATABASE_URL
 
 
 def create_sqlite_engine(url: str | None = None, *, echo: bool = False) -> Engine:
     """SQLite向けのSQLAlchemyエンジンを生成する"""
 
+    global _test_engine  # noqa: PLW0603
+
     database_url = url or get_database_url()
+
+    # pytest実行時かつ明示的なURL指定がない場合のみキャッシュを使用
+    # （環境変数で別DBを指定する特殊なテストケースに対応）
+    if "pytest" in sys.modules and url is None and database_url == "sqlite:///:memory:":
+        if _test_engine is None:
+            _test_engine = _create_engine(database_url, echo)
+        return _test_engine
+
+    return _create_engine(database_url, echo)
+
+
+def _create_engine(database_url: str, echo: bool) -> Engine:
+    """エンジンを実際に作成する内部関数"""
+
     _ensure_sqlite_directory(database_url)
     connect_args = {}
     if database_url.startswith("sqlite"):

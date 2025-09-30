@@ -30,7 +30,7 @@ def store_feed(feed: FeedItem) -> FeedItem:
 
 
 class Tests:
-    def test_store_feed_persists_record(self, tmp_path) -> None:
+    def test_store_feed_persists_record(self) -> None:
         """
         docs:
             目的:
@@ -42,33 +42,29 @@ class Tests:
                 - created_at が保持され、updated_at が更新される。
         """
 
-        db_path = tmp_path / "command" / "persist.db"
-        os.environ["FEED_DATABASE_URL"] = f"sqlite:///{db_path}"
-        try:
-            origin_time = datetime(2024, 1, 1, 9, 0, 0)
-            feed = create_feed(
-                url="https://example.com/store",
-                title="Store Feed",
-                status_code=201,
-                pub_date=origin_time,
-                created_at=datetime(2024, 1, 1, 9, 0, 0),
-            )
+        # pytestにより自動的にインメモリDBが使用される
+        origin_time = datetime(2024, 1, 1, 9, 0, 0)
+        feed = create_feed(
+            url="https://example.com/store",
+            title="Store Feed",
+            status_code=201,
+            pub_date=origin_time,
+            created_at=datetime(2024, 1, 1, 9, 0, 0),
+        )
 
-            stored = store_feed(feed)
-            assert stored.id == feed.id
-            assert stored.status_code == feed.status_code
-            assert stored.created_at == ensure_saved_at(datetime(2024, 1, 1, 9, 0, 0))
-            assert stored.updated_at >= stored.created_at
+        stored = store_feed(feed)
+        assert stored.id == feed.id
+        assert stored.status_code == feed.status_code
+        assert stored.created_at == ensure_saved_at(datetime(2024, 1, 1, 9, 0, 0))
+        assert stored.updated_at >= stored.created_at
 
-            with session_scope() as session:
-                statement = select(FeedRecord).where(FeedRecord.id == feed.id)
-                record = session.exec(statement).first()
-                assert record is not None
-                assert record.title == "Store Feed"
-                assert ensure_saved_at(record.created_at) == stored.created_at
-                assert ensure_saved_at(record.updated_at) == stored.updated_at
-        finally:
-            os.environ.pop("FEED_DATABASE_URL", None)
+        with session_scope() as session:
+            statement = select(FeedRecord).where(FeedRecord.id == feed.id)
+            record = session.exec(statement).first()
+            assert record is not None
+            assert record.title == "Store Feed"
+            assert ensure_saved_at(record.created_at) == stored.created_at
+            assert ensure_saved_at(record.updated_at) == stored.updated_at
 
     def test_store_feed_creates_database_directory(self) -> None:
         """

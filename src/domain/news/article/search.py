@@ -47,7 +47,7 @@ def find_article_by_id(session: Session, feed_id: str) -> Article | None:
 
 class Tests:
     class Test_find_article_by_id:
-        def test_find_article_by_id_returns_article(self, fs, test_db_env) -> None:
+        def test_find_article_by_id_returns_article(self, fs) -> None:
             """
             docs:
                 目的: 保存済み記事を完全なArticleモデルとして取得できることを確認する。
@@ -74,14 +74,12 @@ class Tests:
 
             if not fs.exists("/tmp"):
                 fs.create_dir("/tmp")
-            # test_db_envフィクスチャが環境変数を設定済み
-            from infra.storage.rds import create_sqlite_engine
 
-            # インメモリDBのエンジンを作成
-            engine = create_sqlite_engine("sqlite:///:memory:")
+            from infra.storage.rds import create_sqlite_engine, initialize_database
 
-            # FeedRecordのテーブルを明示的に作成
-            FeedRecord.metadata.create_all(engine)
+            # pytestにより自動的にインメモリDBが使用される
+            engine = create_sqlite_engine()
+            initialize_database(engine)
 
             with session_scope(engine) as session:
                 # Feedレコードを作成
@@ -113,9 +111,7 @@ class Tests:
                 assert retrieved is not None
                 assert retrieved.html_content == "<html>article</html>"
 
-        def test_find_article_by_id_returns_none_when_missing(
-            self, fs, test_db_env
-        ) -> None:
+        def test_find_article_by_id_returns_none_when_missing(self, fs) -> None:
             """
             docs:
                 目的: 未保存IDでは None が返ることを確認する。
@@ -138,14 +134,12 @@ class Tests:
 
             if not fs.exists("/tmp"):
                 fs.create_dir("/tmp")
-            # test_db_envフィクスチャが環境変数を設定済み
-            from infra.storage.rds import create_sqlite_engine
 
-            # インメモリDBのエンジンを作成
-            engine = create_sqlite_engine("sqlite:///:memory:")
+            from infra.storage.rds import create_sqlite_engine, initialize_database
 
-            # FeedRecordのテーブルを明示的に作成
-            FeedRecord.metadata.create_all(engine)
+            # pytestにより自動的にインメモリDBが使用される
+            engine = create_sqlite_engine()
+            initialize_database(engine)
 
             with session_scope(engine) as session:
                 # 未登録IDのテスト
