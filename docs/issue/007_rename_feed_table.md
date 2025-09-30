@@ -4,8 +4,8 @@
 
 # テーブル定義
 
-## CrawlQueue
-ドメイン名はCrawlTaskとする
+## http_request_queue
+ドメイン名はHttpRequestとする
 
 | name        | type     | description                                                              |
 | ----------- | -------- | ------------------------------------------------------------------------ |
