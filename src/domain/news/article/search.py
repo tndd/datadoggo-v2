@@ -52,8 +52,8 @@ def search_articles_by_ids(
     feed_ids: list[str],
     *,
     parallel: bool | int = False,
-) -> dict[str, Article]:
-    """複数のfeed_idを指定してArticleを取得する。idをkeyにしたdictを返す"""
+) -> dict[str, Article | None]:
+    """複数のfeed_idを指定してArticleを取得する。idをkeyにしたdictを返す。取得失敗時はNoneを設定"""
 
     if not feed_ids:
         return {}
@@ -76,8 +76,14 @@ def search_articles_by_ids(
     # バケットからHTMLを並列取得
     if worker_count <= 1:
         # 逐次実行
-        results: dict[str, Article] = {}
-        for feed_id, record in valid_records.items():
+        results: dict[str, Article | None] = {}
+        for feed_id in feed_ids:
+            # valid_recordsに含まれない場合はNone
+            if feed_id not in valid_records:
+                results[feed_id] = None
+                continue
+
+            record = valid_records[feed_id]
             html_content = load_object(
                 bucket_name="article", object_key=feed_id, as_text=True
             )
@@ -89,10 +95,16 @@ def search_articles_by_ids(
                     pub_date=record.pub_date,
                     html_content=html_content,
                 )
+            else:
+                results[feed_id] = None
         return results
 
     # 並列実行
-    results_dict: dict[str, Article] = {}
+    results_dict: dict[str, Article | None] = {}
+
+    # 先にすべてのfeed_idをNoneで初期化
+    for feed_id in feed_ids:
+        results_dict[feed_id] = None
 
     def load_article(feed_id: str, record: FeedRecord) -> tuple[str, Article | None]:
         html_content = load_object(
@@ -118,8 +130,7 @@ def search_articles_by_ids(
 
         for future in as_completed(futures):
             feed_id, article = future.result()
-            if article is not None:
-                results_dict[feed_id] = article
+            results_dict[feed_id] = article
 
     return results_dict
 
@@ -329,6 +340,9 @@ class TestMod:
             assert "article_0" in retrieved
             assert "article_1" in retrieved
             assert "article_2" in retrieved
+            assert retrieved["article_0"] is not None
+            assert retrieved["article_1"] is not None
+            assert retrieved["article_2"] is not None
             assert retrieved["article_0"].html_content == "<html>article0</html>"
             assert retrieved["article_1"].html_content == "<html>article1</html>"
             assert retrieved["article_2"].html_content == "<html>article2</html>"
@@ -338,11 +352,11 @@ class TestMod:
         docs:
             目的:
                 一部のIDが取得失敗した場合、
-                成功したもののみがdictに含まれることを確認する。
+                そのkeyにNoneが設定されることを確認する。
             検証観点:
-                - status_code != 200 のレコードはスキップされる。
-                - バケットにHTMLがないIDはスキップされる。
-                - 未登録のIDはスキップされる。
+                - status_code != 200 のレコードはNone。
+                - バケットにHTMLがないIDはNone。
+                - 未登録のIDはNone。
         """
 
         import os
@@ -421,15 +435,22 @@ class TestMod:
             save_article_content(article)
 
             # 取得テスト（未登録IDも含める）
-            retrieved = search_articles_by_ids(
-                session,
-                ["success", "failed_status", "no_bucket", "missing"],
-            )
+            test_ids = ["success", "failed_status", "no_bucket", "missing"]
+            retrieved = search_articles_by_ids(session, test_ids)
 
-            # 成功したもののみが含まれる
-            assert len(retrieved) == 1
+            # すべてのkeyが含まれる
+            assert len(retrieved) == len(test_ids)
             assert "success" in retrieved
+            assert "failed_status" in retrieved
+            assert "no_bucket" in retrieved
+            assert "missing" in retrieved
+
+            # 成功したもののみがArticle、失敗はNone
+            assert retrieved["success"] is not None
             assert retrieved["success"].html_content == "<html>success</html>"
+            assert retrieved["failed_status"] is None
+            assert retrieved["no_bucket"] is None
+            assert retrieved["missing"] is None
 
     def test_search_articles_by_ids_returns_empty_dict_for_empty_list(self, fs) -> None:
         """
