@@ -96,3 +96,118 @@
 - 既存の`feed_item`テーブルを削除し、新しい`http_request`テーブルを作成
 - 開発段階のため、マイグレーションスクリプトは不要
 - `data/datadoggo.db`を削除して`initialize_database()`で再生成
+
+# 実装Phase
+
+各Phaseごとに実装→テスト→検証のサイクルを回し、段階的に進めます。
+
+## Phase 1: モデル層の変更 (feed/model.py)
+**実装内容**:
+- `FeedItem` → `HttpRequest` にリネーム
+- `FeedRecord` → `HttpRequestRecord` にリネーム
+- `__tablename__` を `"http_request"` に変更
+- フィールド変更:
+  - `title: str` → `description: str | None`
+  - `pub_date: datetime` 削除
+  - `group: str` 追加
+- テスト修正 (同ファイル内の `TestMod`)
+
+**検証**: `pytest src/domain/news/feed/model.py -v`
+
+---
+
+## Phase 2: サービス層の変更 (feed/service.py)
+**実装内容**:
+- `create_feed()` → `create_http_request()` にリネーム
+  - 引数: `title` → `description`
+  - 引数: `pub_date` 削除、`created_at` で代替
+  - 引数: `group` 追加
+- `feed_to_record()` → `http_request_to_record()` にリネーム
+- `record_to_feed()` → `record_to_http_request()` にリネーム
+- `convert_rss_items_to_feed_items()` → `convert_rss_items_to_http_requests()` にリネーム
+  - RSS変換ロジック修正:
+    - `pub_date` を `created_at` として使用
+    - `title` を `description` として使用
+    - `group` パラメータ追加 (RSSソース識別用)
+- テスト修正 (同ファイル内の `TestMod` 5テスト)
+
+**検証**: `pytest src/domain/news/feed/service.py -v`
+
+---
+
+## Phase 3: コマンド層の変更 (feed/command.py)
+**実装内容**:
+- `store_feed()` → `store_http_request()` にリネーム
+- 引数: `FeedItem` → `HttpRequest`
+- インポート修正
+- テスト修正 (同ファイル内の `TestMod` 1テスト)
+
+**検証**: `pytest src/domain/news/feed/command.py -v`
+
+---
+
+## Phase 4: 検索層の変更 (feed/search.py)
+**実装内容**:
+- `FeedQuery` → `HttpRequestQuery` にリネーム
+  - フィールド: `title` → `description`
+  - フィールド: `pub_date_from`, `pub_date_to` → `created_at_from`, `created_at_to`
+  - フィールド: `group` 追加
+- `find_feed_by_id()` → `find_http_request_by_id()` にリネーム
+- `search_feeds()` → `search_http_requests()` にリネーム
+- テスト修正 (同ファイル内の `TestMod` 3テスト)
+
+**検証**: `pytest src/domain/news/feed/search.py -v`
+
+---
+
+## Phase 5: Article検索層の修正 (article/search.py)
+**実装内容**:
+- インポート: `FeedRecord` → `HttpRequestRecord`
+- フィールド参照:
+  - `.title` → `.description` (38, 88行目)
+  - `.pub_date` → `.created_at` (39, 89行目)
+- テスト修正 (同ファイル内の `TestMod` 5テスト)
+
+**検証**: `pytest src/domain/news/article/search.py -v`
+
+---
+
+## Phase 6: Article取得層の修正 (article/fetch.py)
+**実装内容**:
+- インポート: `FeedItem` → `HttpRequest`
+- フィールド参照:
+  - `.title` → `.description` (45行目)
+  - `.pub_date` → `.created_at` (46行目)
+- テスト修正 (同ファイル内の `TestMod` 2テスト)
+
+**検証**: `pytest src/domain/news/article/fetch.py -v`
+
+---
+
+## Phase 7: 統合テスト
+**実装内容**:
+- 全テスト実行
+- ruff check
+- pyright検証
+
+**検証**:
+```bash
+pytest src/domain/news/ -v
+ruff check src/
+pyright src/
+```
+
+---
+
+## Phase 8: ドキュメント更新
+**実装内容**:
+- AGENTS.md に変更内容を反映
+- 変更されたAPI、モデル名、テーブル名を記録
+
+---
+
+## 各Phase実行時の注意点
+1. **Phase完了ごとに必ずテスト実行**
+2. **エラーが出たら次のPhaseに進まない**
+3. **conftest.pyの`initialize_test_db`により、各テストで自動的に新スキーマが適用される**
+4. **本番DB (`data/datadoggo.db`) は手動削除が必要** (開発段階のため)
