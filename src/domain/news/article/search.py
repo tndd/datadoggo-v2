@@ -6,7 +6,7 @@ from sqlmodel import Session, col, select
 
 from infra.storage.bucket import load_object, load_objects
 from src.domain.news.common import ensure_http_url
-from src.domain.news.feed.model import FeedRecord
+from src.domain.news.feed.model import HttpRequestRecord
 
 from .model import Article
 
@@ -18,7 +18,7 @@ def find_article_by_id(session: Session, feed_id: str) -> Article | None:
     """保存済みArticleを取得する。Feedテーブルからメタデータを取得し、バケットからHTMLを取得"""
 
     # Feedテーブルからメタデータを取得
-    statement = select(FeedRecord).where(FeedRecord.id == feed_id)
+    statement = select(HttpRequestRecord).where(HttpRequestRecord.id == feed_id)
     feed_record = session.exec(statement).first()
     if feed_record is None:
         return None
@@ -35,8 +35,8 @@ def find_article_by_id(session: Session, feed_id: str) -> Article | None:
     return Article(
         id=feed_record.id,
         url=ensure_http_url(feed_record.url),
-        title=feed_record.title,
-        pub_date=feed_record.pub_date,
+        title=feed_record.description,
+        pub_date=feed_record.created_at,
         html_content=html_content,
     )
 
@@ -53,7 +53,7 @@ def search_articles_by_ids(
         return {}
 
     # メタデータを一括取得
-    statement = select(FeedRecord).where(col(FeedRecord.id).in_(feed_ids))
+    statement = select(HttpRequestRecord).where(col(HttpRequestRecord.id).in_(feed_ids))
     feed_records = session.exec(statement).all()
 
     # status_code=200のもののみをフィルタ
@@ -85,8 +85,8 @@ def search_articles_by_ids(
         results[feed_id] = Article(
             id=record.id,
             url=ensure_http_url(record.url),
-            title=record.title,
-            pub_date=record.pub_date,
+            title=record.description,
+            pub_date=record.created_at,
             html_content=html_content,
         )
 
@@ -112,7 +112,7 @@ class TestMod:
         from pydantic import HttpUrl
 
         from infra.storage.rds import session_scope
-        from src.domain.news.feed.model import FeedRecord
+        from src.domain.news.feed.model import HttpRequestRecord
 
         from .command import save_article_content
 
@@ -132,11 +132,11 @@ class TestMod:
         with session_scope(engine) as session:
             # Feedレコードを作成
             feed_time = datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc)
-            feed_record = FeedRecord(
+            feed_record = HttpRequestRecord(
                 id="article_test",
                 url="https://example.com/article",
-                title="記事",
-                pub_date=feed_time,
+                description="記事",
+                group="test:article",
                 status_code=200,
                 created_at=feed_time,
                 updated_at=feed_time,
@@ -173,7 +173,7 @@ class TestMod:
         from pathlib import Path
 
         from infra.storage.rds import session_scope
-        from src.domain.news.feed.model import FeedRecord
+        from src.domain.news.feed.model import HttpRequestRecord
 
         project_root = Path(__file__).resolve().parents[4]
         if not fs.exists(str(project_root)):
@@ -194,11 +194,11 @@ class TestMod:
 
             # status_code != 200のテスト
             feed_time = datetime(2025, 9, 29, 10, 0, tzinfo=timezone.utc)
-            failed_feed = FeedRecord(
+            failed_feed = HttpRequestRecord(
                 id="failed_test",
                 url="https://example.com/fail",
-                title="失敗",
-                pub_date=feed_time,
+                description="失敗",
+                group="test:failed",
                 status_code=404,
                 created_at=feed_time,
                 updated_at=feed_time,
@@ -215,7 +215,7 @@ class TestMod:
                 複数IDで複数のArticleを取得でき、
                 idをkeyとしたdictが返ることを確認する。
             検証観点:
-                - 複数のFeedRecordとバケットデータからArticleが復元される。
+                - 複数のHttpRequestRecordとバケットデータからArticleが復元される。
                 - 返り値がdict[str, Article]である。
                 - キーはfeed_idと一致する。
         """
@@ -228,7 +228,7 @@ class TestMod:
         from pydantic import HttpUrl
 
         from infra.storage.rds import session_scope
-        from src.domain.news.feed.model import FeedRecord
+        from src.domain.news.feed.model import HttpRequestRecord
 
         from .command import save_article_content
 
@@ -248,11 +248,11 @@ class TestMod:
             # 複数のFeedレコードを作成
             feed_time = datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc)
             feed_records = [
-                FeedRecord(
+                HttpRequestRecord(
                     id=f"article_{i}",
                     url=f"https://example.com/article/{i}",
-                    title=f"記事{i}",
-                    pub_date=feed_time,
+                    description=f"記事{i}",
+                    group=f"test:article{i}",
                     status_code=200,
                     created_at=feed_time,
                     updated_at=feed_time,
@@ -308,7 +308,7 @@ class TestMod:
         from pydantic import HttpUrl
 
         from infra.storage.rds import session_scope
-        from src.domain.news.feed.model import FeedRecord
+        from src.domain.news.feed.model import HttpRequestRecord
 
         from .command import save_article_content
 
@@ -328,11 +328,11 @@ class TestMod:
             feed_time = datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc)
 
             # 成功するレコード
-            success_record = FeedRecord(
+            success_record = HttpRequestRecord(
                 id="success",
                 url="https://example.com/success",
-                title="成功",
-                pub_date=feed_time,
+                description="成功",
+                group="test:success",
                 status_code=200,
                 created_at=feed_time,
                 updated_at=feed_time,
@@ -340,11 +340,11 @@ class TestMod:
             session.add(success_record)
 
             # status_code != 200
-            failed_status_record = FeedRecord(
+            failed_status_record = HttpRequestRecord(
                 id="failed_status",
                 url="https://example.com/failed",
-                title="失敗",
-                pub_date=feed_time,
+                description="失敗",
+                group="test:failed",
                 status_code=404,
                 created_at=feed_time,
                 updated_at=feed_time,
@@ -352,11 +352,11 @@ class TestMod:
             session.add(failed_status_record)
 
             # バケットなし
-            no_bucket_record = FeedRecord(
+            no_bucket_record = HttpRequestRecord(
                 id="no_bucket",
                 url="https://example.com/no_bucket",
-                title="バケットなし",
-                pub_date=feed_time,
+                description="バケットなし",
+                group="test:no_bucket",
                 status_code=200,
                 created_at=feed_time,
                 updated_at=feed_time,

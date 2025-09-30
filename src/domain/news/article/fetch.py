@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
 from infra.logging import get_logger
-from src.domain.news.feed.model import FeedItem
+from src.domain.news.feed.model import HttpRequest
 
 from .model import Article
 
@@ -12,19 +12,19 @@ _log = get_logger()
 
 
 def fetch_article_content(
-    feed: FeedItem, *, client: HttpsClient | None = None
+    request: HttpRequest, *, client: HttpsClient | None = None
 ) -> Article | None:
-    """FeedItemを基に記事HTMLを取得しArticleを生成する"""
+    """HttpRequestを基に記事HTMLを取得しArticleを生成する"""
 
     http_client = client or HttpsClient()
 
     try:
-        response = http_client.get(str(feed.url))
+        response = http_client.get(str(request.url))
     except Exception as error:  # pragma: no cover - ネットワーク例外のログ確認
         _log.exception(
             "記事HTML取得中に例外が発生しました",
-            feed_id=feed.id,
-            url=str(feed.url),
+            feed_id=request.id,
+            url=str(request.url),
             error=str(error),
         )
         return None
@@ -32,24 +32,24 @@ def fetch_article_content(
     if response.status_code != HTTP_STATUS_OK:
         _log.warning(
             "記事HTMLの取得に失敗しました",
-            feed_id=feed.id,
-            url=str(feed.url),
+            feed_id=request.id,
+            url=str(request.url),
             status_code=response.status_code,
         )
         return None
 
     html = _decode_body(response)
     article = Article(
-        id=feed.id,
-        url=feed.url,
-        title=feed.title,
-        pub_date=feed.pub_date,
+        id=request.id,
+        url=request.url,
+        title=request.description or "",
+        pub_date=request.created_at,
         html_content=html,
     )
     _log.info(
         "記事HTMLの取得に成功しました",
-        feed_id=feed.id,
-        url=str(feed.url),
+        feed_id=request.id,
+        url=str(request.url),
         bytes=len(response.body),
     )
     return article
@@ -100,21 +100,21 @@ class TestMod:
 
         client = HttpsClient(fetcher=mock_fetcher)
 
-        feed = FeedItem(
+        request = HttpRequest(
             id="abc",
             url=cast(HttpUrl, "https://example.com/detail"),
-            title="テスト",
+            description="テスト",
+            group="test:fetch",
             status_code=200,
-            pub_date=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
             created_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
             updated_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
         )
 
-        article = fetch_article_content(feed, client=client)
+        article = fetch_article_content(request, client=client)
 
         assert article is not None
         assert article.html_content == html_text
-        assert article.id == feed.id
+        assert article.id == request.id
 
     def test_fetch_article_content_returns_none_on_error_status(self) -> None:
         """
@@ -147,16 +147,16 @@ class TestMod:
 
         client = HttpsClient(fetcher=mock_fetcher)
 
-        feed = FeedItem(
+        request = HttpRequest(
             id="abc",
             url=cast(HttpUrl, "https://example.com/detail"),
-            title="テスト",
+            description="テスト",
+            group="test:fetch",
             status_code=None,
-            pub_date=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
             created_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
             updated_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
         )
 
-        article = fetch_article_content(feed, client=client)
+        article = fetch_article_content(request, client=client)
 
         assert article is None
