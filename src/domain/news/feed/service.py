@@ -17,75 +17,75 @@ from infra.logging import get_logger
 from infra.parse import parse_rss
 
 from ..common import ensure_http_url, ensure_saved_at
-from .model import FeedItem, FeedRecord
+from .model import HttpRequest, HttpRequestRecord
 
 DEFAULT_FEED_STATUS_CODE = None
 _log = get_logger()
 
 
-def create_feed(
+def create_http_request(
     *,
     url: str,
-    title: str,
+    description: str | None,
+    group: str,
     status_code: int | None,
-    pub_date: datetime,
     created_at: datetime | None = None,
-) -> FeedItem:
-    """入力値からFeedドメインモデルを生成する"""
+) -> HttpRequest:
+    """入力値からHttpRequestドメインモデルを生成する"""
 
-    feed_id = hash_text_sha256(url)
+    request_id = hash_text_sha256(url)
     normalized_created_at = ensure_saved_at(created_at)
     normalized_updated_at = normalized_created_at
 
-    return FeedItem(
-        id=feed_id,
+    return HttpRequest(
+        id=request_id,
         url=ensure_http_url(url),
-        title=title,
+        description=description,
+        group=group,
         status_code=status_code,
-        pub_date=pub_date,
         created_at=normalized_created_at,
         updated_at=normalized_updated_at,
     )
 
 
-def feed_to_record(feed: FeedItem) -> FeedRecord:
-    """Feedドメインモデルを永続化レコードへ変換する"""
+def http_request_to_record(request: HttpRequest) -> HttpRequestRecord:
+    """HttpRequestドメインモデルを永続化レコードへ変換する"""
 
-    return FeedRecord(
-        id=feed.id,
-        url=str(feed.url),
-        title=feed.title,
-        status_code=feed.status_code,
-        pub_date=feed.pub_date,
-        created_at=feed.created_at,
-        updated_at=feed.updated_at,
+    return HttpRequestRecord(
+        id=request.id,
+        url=str(request.url),
+        description=request.description,
+        group=request.group,
+        status_code=request.status_code,
+        created_at=request.created_at,
+        updated_at=request.updated_at,
     )
 
 
-def record_to_feed(record: FeedRecord) -> FeedItem:
-    """永続化レコードをFeedドメインモデルに変換する"""
+def record_to_http_request(record: HttpRequestRecord) -> HttpRequest:
+    """永続化レコードをHttpRequestドメインモデルに変換する"""
 
-    return FeedItem(
+    return HttpRequest(
         id=record.id,
         url=ensure_http_url(record.url),
-        title=record.title,
+        description=record.description,
+        group=record.group,
         status_code=record.status_code,
-        pub_date=record.pub_date,
         created_at=ensure_saved_at(record.created_at),
         updated_at=ensure_saved_at(record.updated_at),
     )
 
 
-def convert_rss_items_to_feed_items(
+def convert_rss_items_to_http_requests(
     root: Element,
     *,
-    source_label: str,
+    group: str,
     default_status_code: int | None = DEFAULT_FEED_STATUS_CODE,
-) -> list[FeedItem]:
-    """RSSのitem要素をFeedItemリストに変換する"""
+) -> list[HttpRequest]:
+    """RSSのitem要素をHttpRequestリストに変換する"""
 
     channel = _extract_channel(root)
-    feed_items: list[FeedItem] = []
+    http_requests: list[HttpRequest] = []
 
     for item in channel.findall("item"):
         link = _extract_text(item, "link")
@@ -100,26 +100,27 @@ def convert_rss_items_to_feed_items(
             continue
 
         try:
-            feed_items.append(
-                create_feed(
+            http_requests.append(
+                create_http_request(
                     url=link,
-                    title=title,
+                    description=title,
+                    group=group,
                     status_code=default_status_code,
-                    pub_date=pub_date,
+                    created_at=pub_date,
                 )
             )
         except (ValueError, ValidationError) as exc:
             _log.warning(
-                "invalid feed item skipped",
-                rss_source=source_label,
-                feed_url=link,
+                "invalid http request item skipped",
+                rss_group=group,
+                request_url=link,
                 error_type=type(exc).__name__,
                 exception_message=str(exc),
-                feed_title=title,
+                description=title,
             )
             continue
 
-    return feed_items
+    return http_requests
 
 
 def _extract_channel(root: Element) -> Element:
@@ -184,41 +185,41 @@ def _local_name(tag: str) -> str:
 
 
 class TestMod:
-    def test_convert_rss_items_to_feed_items_parses_mock_feed(self) -> None:
+    def test_convert_rss_items_to_http_requests_parses_mock_feed(self) -> None:
         """
         docs:
             目的:
-                RSSモックファイルからFeedItemリストが生成されることを確認する。
+                RSSモックファイルからHttpRequestリストが生成されることを確認する。
             検証観点:
-                - item要素からFeedItemが生成される。
-                - pubDateがUTCのdatetimeに変換される。
-                - created_at と updated_at がUTCタイムゾーンで付与される。
+                - item要素からHttpRequestが生成される。
+                - pubDateがcreated_atとしてUTCのdatetimeに変換される。
+                - titleがdescriptionとして設定される。
         """
 
         fixture_path = Path(__file__).resolve().parents[4] / "mock" / "google_news.rss"
         content = fixture_path.read_bytes()
         root = parse_rss(content)
 
-        items = convert_rss_items_to_feed_items(root, source_label="mock:google")
+        items = convert_rss_items_to_http_requests(root, group="mock:google")
 
-        assert items, "FeedItemが1件以上生成されること"
+        assert items, "HttpRequestが1件以上生成されること"
         first = items[0]
-        assert first.title.startswith("Stocks dip as dollar rises")
+        assert first.description and first.description.startswith("Stocks dip as dollar rises")
         assert str(first.url).startswith("https://news.google.com/rss/articles/")
         expected_datetime = datetime(2025, 9, 24, 11, 52, 38, tzinfo=timezone.utc)
-        assert first.pub_date == expected_datetime
+        assert first.created_at == expected_datetime
         assert first.status_code is DEFAULT_FEED_STATUS_CODE
-        assert first.created_at.tzinfo is not None
+        assert first.group == "mock:google"
         assert first.updated_at.tzinfo is not None
 
-    def test_convert_rss_items_to_feed_items_skips_incomplete_item(self) -> None:
+    def test_convert_rss_items_to_http_requests_skips_incomplete_item(self) -> None:
         """
         docs:
             目的:
                 必須要素が欠けたitemをスキップすることを確認する。
             検証観点:
                 - linkが欠けたitemは結果に含まれない。
-                - 妥当なitemのみがFeedItemとして返る。
+                - 妥当なitemのみがHttpRequestとして返る。
         """
 
         rss_xml = """
@@ -238,20 +239,20 @@ class TestMod:
         """
         root = parse_rss(rss_xml)
 
-        items = convert_rss_items_to_feed_items(root, source_label="mock:missing")
+        items = convert_rss_items_to_http_requests(root, group="mock:missing")
 
         assert len(items) == 1
         assert str(items[0].url) == "https://example.com/valid"
         assert items[0].status_code is DEFAULT_FEED_STATUS_CODE
 
-    def test_convert_rss_items_to_feed_items_skips_invalid_http_url(self) -> None:
+    def test_convert_rss_items_to_http_requests_skips_invalid_http_url(self) -> None:
         """
         docs:
             目的:
                 URLが不正なitemが全体処理を止めずにスキップされることを確認する。
             検証観点:
                 - 不正URLのitemは結果に含まれない。
-                - 妥当なitemはFeedItemとして生成される。
+                - 妥当なitemはHttpRequestとして生成される。
         """
 
         rss_xml = """
@@ -272,14 +273,14 @@ class TestMod:
         """
         root = parse_rss(rss_xml)
 
-        items = convert_rss_items_to_feed_items(root, source_label="mock:invalid")
+        items = convert_rss_items_to_http_requests(root, group="mock:invalid")
 
         assert len(items) == 1
         first = items[0]
-        assert first.title == "Valid URL"
+        assert first.description == "Valid URL"
         assert str(first.url) == "https://example.com/article"
 
-    def test_convert_rss_items_to_feed_items_logs_invalid_http_url(
+    def test_convert_rss_items_to_http_requests_logs_invalid_http_url(
         self,
         app_logging,
     ) -> None:
@@ -289,7 +290,7 @@ class TestMod:
                 不正URLを含むitemをスキップした際にログへ詳細が出力されることを確認する。
             検証観点:
                 - ログファイルが生成され、メッセージがJSONで出力される。
-                - ログのextraにrss_sourceとfeed_urlが含まれる。
+                - ログのextraにrss_groupとrequest_urlが含まれる。
         """
 
         rss_xml = """
@@ -305,7 +306,7 @@ class TestMod:
         """
         root = parse_rss(rss_xml)
 
-        items = convert_rss_items_to_feed_items(root, source_label="mock:logging")
+        items = convert_rss_items_to_http_requests(root, group="mock:logging")
 
         assert not items
 
@@ -316,12 +317,12 @@ class TestMod:
         assert log_lines, "ログが1行以上出力されること"
         payload = json.loads(log_lines[-1])
         record = payload["record"]
-        assert record["message"] == "invalid feed item skipped"
+        assert record["message"] == "invalid http request item skipped"
         extra = record["extra"]
-        assert extra["rss_source"] == "mock:logging"
-        assert extra["feed_url"] == "notaurl"
+        assert extra["rss_group"] == "mock:logging"
+        assert extra["request_url"] == "notaurl"
 
-    def test_convert_rss_items_to_feed_items_raises_without_channel(self) -> None:
+    def test_convert_rss_items_to_http_requests_raises_without_channel(self) -> None:
         """
         docs:
             目的:
@@ -333,4 +334,4 @@ class TestMod:
         root = ET.fromstring("<rss version='2.0'></rss>")
 
         with pytest.raises(ValueError):
-            convert_rss_items_to_feed_items(root, source_label="mock:none")
+            convert_rss_items_to_http_requests(root, group="mock:none")
