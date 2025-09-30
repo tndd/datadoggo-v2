@@ -33,13 +33,13 @@ class TestMod:
                 store_http_request が永続化を行い、戻り値として最新状態の
                 HttpRequest を返すことを確認する。
             検証観点:
-                - create_http_request で生成した HttpRequest が store_http_request で保存される。
+                - create_http_request で生成した HttpRequest が
+                  store_http_request で保存される。
                 - 保存後に同一IDのレコードがDB上に存在する。
                 - created_at が保持され、updated_at が更新される。
         """
 
         # pytestにより自動的にインメモリDBが使用される
-        origin_time = datetime(2024, 1, 1, 9, 0, 0)
         request = create_http_request(
             url="https://example.com/store",
             description="Store Request",
@@ -55,7 +55,9 @@ class TestMod:
         assert stored.updated_at >= stored.created_at
 
         with session_scope() as session:
-            statement = select(HttpRequestRecord).where(HttpRequestRecord.id == request.id)
+            statement = select(HttpRequestRecord).where(
+                HttpRequestRecord.id == request.id
+            )
             record = session.exec(statement).first()
             assert record is not None
             assert record.description == "Store Request"

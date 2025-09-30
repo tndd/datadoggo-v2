@@ -35,7 +35,7 @@ def find_article_by_id(session: Session, feed_id: str) -> Article | None:
     return Article(
         id=feed_record.id,
         url=ensure_http_url(feed_record.url),
-        title=feed_record.description,
+        title=feed_record.description or "",
         pub_date=feed_record.created_at,
         html_content=html_content,
     )
@@ -85,7 +85,7 @@ def search_articles_by_ids(
         results[feed_id] = Article(
             id=record.id,
             url=ensure_http_url(record.url),
-            title=record.description,
+            title=record.description or "",
             pub_date=record.created_at,
             html_content=html_content,
         )

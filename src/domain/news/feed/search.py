@@ -58,13 +58,19 @@ def search_http_requests(query: HttpRequestQuery) -> list[HttpRequest]:
             statement = statement.where(group_expr.contains(query.group))
 
         if query.status_code is not None:
-            statement = statement.where(HttpRequestRecord.status_code == query.status_code)
+            statement = statement.where(
+                HttpRequestRecord.status_code == query.status_code
+            )
 
         if query.created_at_from is not None:
-            statement = statement.where(HttpRequestRecord.created_at >= query.created_at_from)
+            statement = statement.where(
+                HttpRequestRecord.created_at >= query.created_at_from
+            )
 
         if query.created_at_to is not None:
-            statement = statement.where(HttpRequestRecord.created_at <= query.created_at_to)
+            statement = statement.where(
+                HttpRequestRecord.created_at <= query.created_at_to
+            )
 
         statement = (
             statement.order_by(desc(cast(Any, HttpRequestRecord.created_at)))
@@ -167,13 +173,17 @@ class TestMod:
         assert len(result) == expected_count
         assert result[0].created_at > result[1].created_at
 
-        description_filtered = search_http_requests(HttpRequestQuery(description="Daily", limit=10))
+        description_filtered = search_http_requests(
+            HttpRequestQuery(description="Daily", limit=10)
+        )
         assert {item.id for item in description_filtered} == {
             request_success.id,
             request_other.id,
         }
 
-        status_filtered = search_http_requests(HttpRequestQuery(status_code=500, limit=10))
+        status_filtered = search_http_requests(
+            HttpRequestQuery(status_code=500, limit=10)
+        )
         assert [item.id for item in status_filtered] == [request_failure.id]
 
         range_filtered = search_http_requests(

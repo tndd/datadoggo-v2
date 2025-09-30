@@ -204,7 +204,9 @@ class TestMod:
 
         assert items, "HttpRequestが1件以上生成されること"
         first = items[0]
-        assert first.description and first.description.startswith("Stocks dip as dollar rises")
+        assert first.description and first.description.startswith(
+            "Stocks dip as dollar rises"
+        )
         assert str(first.url).startswith("https://news.google.com/rss/articles/")
         expected_datetime = datetime(2025, 9, 24, 11, 52, 38, tzinfo=timezone.utc)
         assert first.created_at == expected_datetime
