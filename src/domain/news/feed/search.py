@@ -200,9 +200,7 @@ class TestMod:
         )
         assert [item.id for item in url_filtered] == [request_other.id]
 
-        group_filtered = search_http_requests(
-            HttpRequestQuery(group="test", limit=10)
-        )
+        group_filtered = search_http_requests(HttpRequestQuery(group="test", limit=10))
         assert {item.id for item in group_filtered} == {
             request_success.id,
             request_failure.id,

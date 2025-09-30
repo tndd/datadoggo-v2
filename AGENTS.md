@@ -40,7 +40,18 @@ Python は4スペースインデント、型ヒント必須、テキストコメ
 環境変数の設定は不要です。資格情報やトークンは `.env` などの秘匿ファイルに保存し、リポジトリにはコミットしないでください。外部サービスとの通信が必要なテストはオンライン専用マーカーで隔離し、誤って本番エンドポイントへ負荷を掛けないよう注意します。
 
 ## データベース更新時の注意
-- RSS フィードはバケットを介さず直接 `feed_item` テーブルへ保存する。`bucket_id` カラムは廃止され、`created_at` / `updated_at` を UTC で保持する。
+- **テーブル名変更**: `feed_item` → `http_request` に変更。
+- **モデル名変更**: `FeedItem` → `HttpRequest`, `FeedRecord` → `HttpRequestRecord` に変更。
+- **フィールド変更**:
+  - `title` → `description` (nullable)
+  - `pub_date` 削除 → `created_at` で代替（RSSのpubDateはcreated_atとして保存）
+  - `group` フィールド追加（`{source}:{category}` 形式推奨、例: `bbc:world`）
+- **関数名変更**:
+  - `create_feed` → `create_http_request`
+  - `store_feed` → `store_http_request`
+  - `find_feed_by_id` → `find_http_request_by_id`
+  - `search_feeds` → `search_http_requests`
+  - `FeedQuery` → `HttpRequestQuery`
 - スキーマ変更を反映する際は、開発環境で `data/datadoggo.db` を削除した上で `initialize_database()` を再実行し、新しいカラム定義でテーブルを作り直す。
 
 ## エージェント作業時のヒント
@@ -55,8 +66,9 @@ Python は4スペースインデント、型ヒント必須、テキストコメ
 ## Article機能の実装ガイド
 - ドメイン構成は `fetch.py`（HTML取得で `Article` を生成）、`command.py`（バケット保存）、`search.py`（`Article` 再構築）のシンプルな三層構成。
 - `save_article_content` は `Article` を受け取り、HTMLをバケットに保存。DBへのメタデータ保存は廃止。
-- バケットキーは Feed のハッシュIDそのものを使用し、保存先は `data/bucket/article/<shard>/` 配下。テストでは `pyfakefs` の `fs` フィクスチャで仮想化する。
-- `find_article_by_id` は `FeedRecord` からメタデータを取得し、バケットからHTMLを取得して `Article` を再構築する。`status_code` が200以外の場合は `None` を返す。
+- バケットキーは HttpRequest のハッシュIDそのものを使用し、保存先は `data/bucket/article/<shard>/` 配下。テストでは `pyfakefs` の `fs` フィクスチャで仮想化する。
+- `find_article_by_id` は `HttpRequestRecord` からメタデータを取得し、バケットからHTMLを取得して `Article` を再構築する。`status_code` が200以外の場合は `None` を返す。
+- `fetch_article_content` は `HttpRequest` を引数に取り、記事HTMLを取得して `Article` を生成する。`description` が `None` の場合は空文字列を使用する。
 
 ## docsの更新
 issueの更新についてだが、closed下の文書についての更新は不要です。
