@@ -114,7 +114,6 @@ def load_object(
 
 def search_object_keys(
     bucket_name: str,
-    prefix: str = "",
     *,
     storage_root: Path | str = DEFAULT_STORAGE_ROOT,
 ) -> list[str]:
@@ -130,15 +129,12 @@ def search_object_keys(
         for file_path in bucket_dir.rglob(f"*{extension}"):
             name = file_path.name
             key = name[: -len(extension)] if name.endswith(extension) else name
-            if prefix and not key.startswith(prefix):
-                continue
             keys.append(key)
         return keys
     except Exception as error:
         _log.exception(
             "オブジェクトキーの検索に失敗しました",
             bucket=bucket_name,
-            prefix=prefix,
             error=str(error),
         )
         return []
@@ -279,7 +275,6 @@ class TestMod:
             目的: 保存済みオブジェクトの一覧取得を確認する。
             検証観点:
                 - バケット内ファイルがキーとして検出される。
-                - プレフィックス指定で絞り込みが行われる。
         """
 
         fs.create_dir("/data")
@@ -300,9 +295,6 @@ class TestMod:
 
         keys = search_object_keys("objects", storage_root=storage_root)
         assert set(keys) == {key1, key2}
-
-        filtered = search_object_keys("objects", prefix=key1, storage_root=storage_root)
-        assert filtered == [key1]
 
     def test_error_handling(self, fs: FakeFilesystem) -> None:
         """
