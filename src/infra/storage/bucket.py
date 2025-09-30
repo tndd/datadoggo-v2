@@ -7,14 +7,13 @@ from pathlib import Path
 
 from pyfakefs.fake_filesystem import FakeFilesystem
 
+from src.infra.compression import compress_text_to_zstd, decompress_zstd_to_text
 from src.infra.compute import (
     DEFAULT_MAX_STORAGE_KEY_LENGTH,
-    compress_text_to_zstd,
-    decompress_zstd_to_text,
-    generate_timestamp,
     sanitize_storage_key,
 )
 from src.infra.logging import get_logger
+from src.infra.naming import generate_timestamp
 from src.infra.storage.file import load_bytes, save_bytes_to_file
 
 DEFAULT_STORAGE_ROOT = Path("data/bucket")
