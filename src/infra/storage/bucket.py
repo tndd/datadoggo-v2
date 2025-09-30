@@ -175,8 +175,6 @@ def _build_object_path(
     return root / bucket_name / shard / file_name
 
 
-
-
 def _normalize_parallel(parallel: bool | int, item_count: int) -> int:
     """並列実行時のワーカー数を決定する"""
 
