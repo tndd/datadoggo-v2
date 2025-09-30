@@ -158,7 +158,7 @@ def _find_project_root() -> Path:
     return current.parent
 
 
-class Tests:
+class TestMod:
     def test_load_file(self) -> None:
         """
         docs:

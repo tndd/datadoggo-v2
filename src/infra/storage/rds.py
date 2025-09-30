@@ -117,7 +117,7 @@ def _ensure_sqlite_directory(database_url: str) -> None:
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
 
-class Tests:
+class TestMod:
     def test_ensure_sqlite_directory_creates_parent(self, fs) -> None:
         """
         docs:

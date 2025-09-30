@@ -62,7 +62,7 @@ def _decode_body(response: HttpResponse) -> str:
     return response.body.decode(encoding)
 
 
-class Tests:
+class TestMod:
     """このモジュールのテストコレクション"""
 
     def test_fetch_article_content_returns_model_on_success(self) -> None:

@@ -81,7 +81,7 @@ async def _fetch_title(tab) -> str:
         return "Unknown"
 
 
-class Tests:
+class TestMod:
     """外部公開関数のテスト"""
 
     import pytest

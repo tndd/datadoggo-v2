@@ -45,7 +45,7 @@ def find_article_by_id(session: Session, feed_id: str) -> Article | None:
     )
 
 
-class Tests:
+class TestMod:
     """このモジュールのテストコレクション"""
 
     def test_find_article_by_id_returns_article(self, fs) -> None:

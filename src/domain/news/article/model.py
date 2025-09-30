@@ -25,7 +25,7 @@ class Article(BaseModel):
     html_content: str
 
 
-class Tests:
+class TestMod:
     """このモジュールのテストコレクション"""
 
     def test_article_holds_html(self) -> None:

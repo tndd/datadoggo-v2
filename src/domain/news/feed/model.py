@@ -46,7 +46,7 @@ class FeedRecord(SQLModel, table=True):
     updated_at: datetime = SQLField(nullable=False)
 
 
-class Tests:
+class TestMod:
     """このモジュールのテストコレクション"""
 
     def test_is_success_and_backlog(self) -> None:

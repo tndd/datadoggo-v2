@@ -26,7 +26,7 @@ def save_article_content(article: Article) -> str:
 # 取得失敗はFeedItemのstatus_codeで管理されるため、この関数は不要
 
 
-class Tests:
+class TestMod:
     """このモジュールのテストコレクション"""
 
     def test_save_article_content_saves_html(self, fs) -> None:

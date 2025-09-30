@@ -48,7 +48,7 @@ def load_rss_links(query: RssItemQuery | None = None) -> list[RssItem]:
     return links
 
 
-class Tests:
+class TestMod:
     """このモジュールのテストコレクション"""
 
     def test_load_rss_links_reads_default_file(self) -> None:

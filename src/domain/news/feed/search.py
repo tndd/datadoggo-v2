@@ -70,7 +70,7 @@ def search_feeds(query: FeedQuery) -> list[FeedItem]:
         return [record_to_feed(item) for item in records]
 
 
-class Tests:
+class TestMod:
     def test_find_feed_by_id_returns_item(self) -> None:
         """
         docs:

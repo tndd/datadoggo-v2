@@ -22,7 +22,7 @@ def fetch_rss_elements_from_query(
     return fetch_rss_from_links(rss_items, client=client, parallel=parallel)
 
 
-class Tests:
+class TestMod:
     """このモジュールのテストコレクション"""
 
     def test_fetch_rss_elements_from_query_returns_elements(self, tmp_path) -> None:

@@ -81,7 +81,7 @@ def _normalize_parallel(parallel: bool | int, item_count: int) -> int:
     return 1
 
 
-class Tests:
+class TestMod:
     """このモジュールのテストコレクション"""
 
     def test_fetch_rss_element_returns_rss_root(self) -> None:

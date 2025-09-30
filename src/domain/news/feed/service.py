@@ -183,7 +183,7 @@ def _local_name(tag: str) -> str:
     return tag
 
 
-class Tests:
+class TestMod:
     def test_convert_rss_items_to_feed_items_parses_mock_feed(self) -> None:
         """
         docs:

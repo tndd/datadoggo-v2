@@ -25,7 +25,7 @@ def store_feed(feed: FeedItem) -> FeedItem:
         return record_to_feed(merged)
 
 
-class Tests:
+class TestMod:
     def test_store_feed_persists_record(self) -> None:
         """
         docs:

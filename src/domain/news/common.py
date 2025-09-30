@@ -24,7 +24,7 @@ def ensure_saved_at(value: datetime | None = None) -> datetime:
     return target.astimezone(timezone.utc)
 
 
-class Tests:
+class TestMod:
     """このモジュールのテストコレクション"""
 
     def test_ensure_http_url_accepts_str(self) -> None:
