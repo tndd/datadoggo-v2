@@ -149,7 +149,7 @@ def decompress_zstd_to_text(
     return decompress_zstd_to_bytes(payload).decode(encoding)
 
 
-class Tests:
+class TestMod:
     def test_generate_timestamp(self) -> None:
         """
         docs:

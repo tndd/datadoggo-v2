@@ -246,7 +246,7 @@ class InterceptHandler(logging.Handler):
         log.opt(depth=6, exception=record.exc_info, colors=False).log(level, message)
 
 
-class Tests:
+class TestMod:
     @staticmethod
     def _create_logger_extra(module_name: str) -> dict[str, object]:
         """

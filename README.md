@@ -14,11 +14,9 @@ src
 - `pip`ではなく`uv`を使用すること。
 
 
-# 環境変数の設定
-`Feed`テーブルの接続先は環境変数`FEED_DATABASE_URL`で切り替えられる。
-未設定時は`sqlite:///data/datadoggo.db`が利用される。
+# データベース設定
 
-```bash
-# 例: テスト時に一時ファイルへ切り替える
-FEED_DATABASE_URL=sqlite:///tmp/test-datadoggo.db
-```
+- **本番実行時**: 固定パス `sqlite:///data/datadoggo.db`
+- **pytest実行時**: 自動的にインメモリDB `sqlite:///:memory:`
+
+環境変数の設定は不要です。

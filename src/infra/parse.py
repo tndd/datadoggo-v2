@@ -72,7 +72,7 @@ def _extract_local_name(tag: str) -> str:
     return tag
 
 
-class Tests:
+class TestMod:
     def test_parse_rss_returns_rss_root(self) -> None:
         """
         docs:

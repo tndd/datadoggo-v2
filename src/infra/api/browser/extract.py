@@ -59,7 +59,7 @@ def _parse_to_markdown(html: str) -> str:
 
 
 ### TEST ###
-class Tests:
+class TestMod:
     from infra.storage.file import load_file
 
     load_file: Callable[[str], str]
@@ -74,7 +74,7 @@ class Tests:
                 - MARKDOWN モードはMarkdown形式に変換される
                 - 不正なモードの場合はValueErrorが発生する
         """
-        html = Tests.load_file("mock/plain.html")
+        html = TestMod.load_file("mock/plain.html")
 
         # HTMLモード
         result_html = extract_page_content(html, ExtractMode.HTML)
@@ -97,7 +97,7 @@ class Tests:
         except ValueError:
             pass
 
-    class TestsPrivate:
+    class TestModPrivate:
         def test_parse_html_to_text(self) -> None:
             """
             docs:
@@ -107,7 +107,7 @@ class Tests:
                     - スクリプトやスタイルが除去される
                     - テキスト内容が適切に抽出される
             """
-            html = Tests.load_file("mock/plain.html")
+            html = TestMod.load_file("mock/plain.html")
             text = _parse_to_text(html)
 
             assert text is not None
@@ -126,7 +126,7 @@ class Tests:
                     - 見出しが # 記法になる
                     - リストやテーブルが適切に変換される
             """
-            html = Tests.load_file("mock/plain.html")
+            html = TestMod.load_file("mock/plain.html")
             markdown = _parse_to_markdown(html)
 
             assert markdown is not None

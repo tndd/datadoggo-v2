@@ -201,7 +201,7 @@ def _to_compressed_bytes(
     return compress_text_to_zstd(payload, encoding=encoding)
 
 
-class Tests:
+class TestMod:
     def test_save_and_load_text(self, fs: FakeFilesystem) -> None:
         """
         docs:

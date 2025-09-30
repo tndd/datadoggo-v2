@@ -24,32 +24,32 @@ def ensure_saved_at(value: datetime | None = None) -> datetime:
     return target.astimezone(timezone.utc)
 
 
-class Tests:
-    class Test_ensure_http_url:
-        def test_ensure_http_url_accepts_str(self) -> None:
-            """
-            docs:
-                目的: 文字列URLがHttpUrlとして正規化されることを確認する。
-                検証観点:
-                    - httpsスキームのURLがそのまま返る。
-            """
+class TestMod:
+    """このモジュールのテストコレクション"""
 
-            result = ensure_http_url("https://example.com/path")
-            assert str(result) == "https://example.com/path"
+    def test_ensure_http_url_accepts_str(self) -> None:
+        """
+        docs:
+            目的: 文字列URLがHttpUrlとして正規化されることを確認する。
+            検証観点:
+                - httpsスキームのURLがそのまま返る。
+        """
 
-    class Test_ensure_saved_at:
-        def test_ensure_saved_at_normalizes_naive_datetime(self) -> None:
-            """
-            docs:
-                目的: naive datetime が UTC 付きに補正されることを確認する。
-                検証観点:
-                    - tzinfo が None の場合に UTC タイムゾーンが付与される。
-            """
+        result = ensure_http_url("https://example.com/path")
+        assert str(result) == "https://example.com/path"
 
-            naive = datetime(2025, 9, 27, 12, 0, 0)
+    def test_ensure_saved_at_normalizes_naive_datetime(self) -> None:
+        """
+        docs:
+            目的: naive datetime が UTC 付きに補正されることを確認する。
+            検証観点:
+                - tzinfo が None の場合に UTC タイムゾーンが付与される。
+        """
 
-            normalized = ensure_saved_at(naive)
+        naive = datetime(2025, 9, 27, 12, 0, 0)
 
-            assert normalized.tzinfo is not None
-            offset = normalized.utcoffset()
-            assert offset is not None and offset.total_seconds() == 0
+        normalized = ensure_saved_at(naive)
+
+        assert normalized.tzinfo is not None
+        offset = normalized.utcoffset()
+        assert offset is not None and offset.total_seconds() == 0

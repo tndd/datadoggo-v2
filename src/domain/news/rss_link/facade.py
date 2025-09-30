@@ -22,107 +22,107 @@ def fetch_rss_elements_from_query(
     return fetch_rss_from_links(rss_items, client=client, parallel=parallel)
 
 
-class Tests:
-    class Test_fetch_rss_elements_from_query:
-        def test_fetch_rss_elements_from_query_returns_elements(self, tmp_path) -> None:
-            """
-            docs:
-                目的:
-                    RssItemQuery で指定したリンクの RSS 要素が取得できることを確認する。
-                検証観点:
-                    - group 指定で絞り込まれたリンクのみが通信される。
-                    - 返却された Element からタイトルが読み取れる。
-            """
+class TestMod:
+    """このモジュールのテストコレクション"""
 
-            yaml_path = tmp_path / "links.yml"
-            yaml_path.write_text(
-                "\n".join(
-                    [
-                        "sample:",
-                        "  headline: https://example.com/rss",
-                        "  latest: https://example.com/rss-2",
-                        "other:",
-                        "  daily: https://example.com/rss-3",
-                    ]
-                ),
+    def test_fetch_rss_elements_from_query_returns_elements(self, tmp_path) -> None:
+        """
+        docs:
+            目的:
+                RssItemQuery で指定したリンクの RSS 要素が取得できることを確認する。
+            検証観点:
+                - group 指定で絞り込まれたリンクのみが通信される。
+                - 返却された Element からタイトルが読み取れる。
+        """
+
+        yaml_path = tmp_path / "links.yml"
+        yaml_path.write_text(
+            "\n".join(
+                [
+                    "sample:",
+                    "  headline: https://example.com/rss",
+                    "  latest: https://example.com/rss-2",
+                    "other:",
+                    "  daily: https://example.com/rss-3",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        rss_payloads = {
+            "https://example.com/rss": (
+                b"<rss version='2.0'><channel><title>Headline</title></channel></rss>"
+            ),
+            "https://example.com/rss-2": (
+                b"<rss version='2.0'><channel><title>Latest</title></channel></rss>"
+            ),
+        }
+        fetched_urls: list[str] = []
+
+        def mock_fetcher(
+            method: str,
+            url: str,
+            headers: dict[str, str],
+            data: bytes | None,
+            timeout: float,
+        ) -> HttpResponse:
+            fetched_urls.append(url)
+            assert url in rss_payloads
+            return HttpResponse(
+                url=url,
+                method=method,
+                status_code=HTTP_STATUS_OK,
+                headers={},
+                body=rss_payloads[url],
                 encoding="utf-8",
             )
 
-            rss_payloads = {
-                "https://example.com/rss": (
-                    b"<rss version='2.0'><channel>"
-                    b"<title>Headline</title></channel></rss>"
-                ),
-                "https://example.com/rss-2": (
-                    b"<rss version='2.0'><channel><title>Latest</title></channel></rss>"
-                ),
-            }
-            fetched_urls: list[str] = []
+        client = HttpsClient(fetcher=mock_fetcher)
 
-            def mock_fetcher(
-                method: str,
-                url: str,
-                headers: dict[str, str],
-                data: bytes | None,
-                timeout: float,
-            ) -> HttpResponse:
-                fetched_urls.append(url)
-                assert url in rss_payloads
-                return HttpResponse(
-                    url=url,
-                    method=method,
-                    status_code=HTTP_STATUS_OK,
-                    headers={},
-                    body=rss_payloads[url],
-                    encoding="utf-8",
-                )
+        elements = fetch_rss_elements_from_query(
+            RssItemQuery(group="sample", path=str(yaml_path)),
+            client=client,
+        )
 
-            client = HttpsClient(fetcher=mock_fetcher)
+        assert set(fetched_urls) == set(rss_payloads)
+        assert {element.findtext("channel/title") for element in elements} == {
+            "Headline",
+            "Latest",
+        }
 
-            elements = fetch_rss_elements_from_query(
-                RssItemQuery(group="sample", path=str(yaml_path)),
-                client=client,
-            )
+    def test_fetch_rss_elements_from_query_returns_empty_when_not_matched(
+        self, tmp_path
+    ) -> None:
+        """
+        docs:
+            目的: クエリに一致するリンクが無い場合でも空リストで返ることを確認する。
+            検証観点:
+                - 通信は発生せず空リストとなる。
+        """
 
-            assert set(fetched_urls) == set(rss_payloads)
-            assert {element.findtext("channel/title") for element in elements} == {
-                "Headline",
-                "Latest",
-            }
-
-        def test_fetch_rss_elements_from_query_returns_empty_when_not_matched(
-            self, tmp_path
-        ) -> None:
+        yaml_path = tmp_path / "links.yml"
+        yaml_path.write_text(
             """
-            docs:
-                目的: クエリに一致するリンクが無い場合でも空リストで返ることを確認する。
-                検証観点:
-                    - 通信は発生せず空リストとなる。
-            """
+            sample:
+            headline: https://example.com/rss
+            """.strip(),
+            encoding="utf-8",
+        )
 
-            yaml_path = tmp_path / "links.yml"
-            yaml_path.write_text(
-                """
-                sample:
-                headline: https://example.com/rss
-                """.strip(),
-                encoding="utf-8",
-            )
+        def error_fetcher(
+            method: str,
+            url: str,
+            headers: dict[str, str],
+            data: bytes | None,
+            timeout: float,
+        ) -> HttpResponse:
+            raise AssertionError("通信が発生してはいけません。")
 
-            def error_fetcher(
-                method: str,
-                url: str,
-                headers: dict[str, str],
-                data: bytes | None,
-                timeout: float,
-            ) -> HttpResponse:
-                raise AssertionError("通信が発生してはいけません。")
+        client = HttpsClient(fetcher=error_fetcher)
 
-            client = HttpsClient(fetcher=error_fetcher)
+        elements = fetch_rss_elements_from_query(
+            RssItemQuery(group="missing", path=str(yaml_path)),
+            client=client,
+        )
 
-            elements = fetch_rss_elements_from_query(
-                RssItemQuery(group="missing", path=str(yaml_path)),
-                client=client,
-            )
-
-            assert elements == []
+        assert elements == []

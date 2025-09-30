@@ -259,7 +259,7 @@ class RecordingFetcher:
         )
 
 
-class Tests:
+class TestMod:
     def test_get_uses_injected_fetcher(self) -> None:
         """
         docs:
@@ -397,7 +397,7 @@ class Tests:
             client.get("https://example.com/error")
 
 
-class TestsOnline:
+class TestModOnline:
     @pytest.mark.online
     def test_get_real_request(self) -> None:
         """

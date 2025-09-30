@@ -25,30 +25,31 @@ class Article(BaseModel):
     html_content: str
 
 
-class Tests:
-    class Test_article_model:
-        def test_article_holds_html(self) -> None:
-            """
-            docs:
-                目的: Article がHTML本体を保持できることを確認する。
-                検証観点:
-                    - HTML文字列が格納される。
-                    - Feed由来の属性が保持される。
-            """
+class TestMod:
+    """このモジュールのテストコレクション"""
 
-            from datetime import datetime, timezone
-            from typing import cast
+    def test_article_holds_html(self) -> None:
+        """
+        docs:
+            目的: Article がHTML本体を保持できることを確認する。
+            検証観点:
+                - HTML文字列が格納される。
+                - Feed由来の属性が保持される。
+        """
 
-            from pydantic import HttpUrl
+        from datetime import datetime, timezone
+        from typing import cast
 
-            base_time = datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc)
-            article = Article(
-                id="abc",
-                url=cast(HttpUrl, "https://example.com/article"),
-                title="テスト記事",
-                pub_date=base_time,
-                html_content="<html>content</html>",
-            )
+        from pydantic import HttpUrl
 
-            assert article.html_content == "<html>content</html>"
-            assert article.pub_date == base_time
+        base_time = datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc)
+        article = Article(
+            id="abc",
+            url=cast(HttpUrl, "https://example.com/article"),
+            title="テスト記事",
+            pub_date=base_time,
+            html_content="<html>content</html>",
+        )
+
+        assert article.html_content == "<html>content</html>"
+        assert article.pub_date == base_time
