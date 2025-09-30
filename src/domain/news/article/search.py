@@ -28,12 +28,8 @@ def find_article_by_id(session: Session, feed_id: str) -> Article | None:
         return None
 
     # バケットからHTMLコンテンツを取得
-    html_content = load_object(
-        bucket_name="article",
-        object_key=feed_id,
-        as_text=True,
-    )
-    if not html_content or not isinstance(html_content, str):
+    html_content = load_object(bucket_name="article", object_key=feed_id)
+    if html_content is None:
         return None
 
     return Article(
@@ -67,10 +63,7 @@ def search_articles_by_ids(
 
     # バケットからHTMLを並列取得
     html_contents = load_objects(
-        bucket_name="article",
-        object_keys=feed_ids,
-        parallel=parallel,
-        as_text=True,
+        bucket_name="article", object_keys=feed_ids, parallel=parallel
     )
 
     # Articleを構築
@@ -82,8 +75,8 @@ def search_articles_by_ids(
             continue
 
         # HTMLが取得できなかった場合はNone
-        html_content = html_contents.get(feed_id, "")
-        if not html_content or not isinstance(html_content, str):
+        html_content = html_contents.get(feed_id)
+        if html_content is None:
             results[feed_id] = None
             continue
 

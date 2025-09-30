@@ -4,15 +4,12 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Union
 
 from pyfakefs.fake_filesystem import FakeFilesystem
 
 from src.infra.compute import (
     DEFAULT_MAX_STORAGE_KEY_LENGTH,
-    compress_bytes_to_zstd,
     compress_text_to_zstd,
-    decompress_zstd_to_bytes,
     decompress_zstd_to_text,
     generate_timestamp,
     sanitize_storage_key,
@@ -29,14 +26,14 @@ _log = get_logger()
 
 
 def save_object(
-    payload: Union[bytes, str],
+    payload: str,
     bucket_name: str,
     object_key: str,
     *,
     storage_root: Path | str = DEFAULT_STORAGE_ROOT,
     encoding: str = "utf-8",
 ) -> str:
-    """オブジェクトを圧縮して保存する"""
+    """文字列オブジェクトを圧縮して保存する"""
 
     try:
         resolved_key = _resolve_storage_key(object_key)
@@ -44,7 +41,7 @@ def save_object(
             bucket_name, resolved_key, storage_root, DEFAULT_OBJECT_EXTENSION
         )
 
-        payload_bytes = _to_compressed_bytes(payload, encoding=encoding)
+        payload_bytes = compress_text_to_zstd(payload, encoding=encoding)
         save_bytes_to_file(payload_bytes, target_path)
         _log.info(
             "オブジェクトを保存しました",
@@ -69,10 +66,9 @@ def load_object(
     object_key: str,
     *,
     storage_root: Path | str = DEFAULT_STORAGE_ROOT,
-    as_text: bool = False,
     encoding: str = "utf-8",
-) -> Union[bytes, str]:
-    """保存済みオブジェクトを読み込む"""
+) -> str | None:
+    """保存済みオブジェクトを解凍して文字列として読み込む。失敗時はNoneを返す"""
 
     try:
         target_path = _build_object_path(
@@ -86,7 +82,7 @@ def load_object(
                 object_key=object_key,
                 path=str(target_path),
             )
-            return "" if as_text else b""
+            return None
 
         compressed_data = load_bytes(target_path)
         if not compressed_data:
@@ -95,26 +91,17 @@ def load_object(
                 bucket=bucket_name,
                 object_key=object_key,
             )
-            return "" if as_text else b""
+            return None
 
-        if as_text:
-            result = decompress_zstd_to_text(compressed_data, encoding=encoding)
-            text_bytes = len(result.encode(encoding))
-            _log.info(
-                "テキストオブジェクトを読み込みました",
-                bucket=bucket_name,
-                object_key=object_key,
-                bytes=text_bytes,
-            )
-            return result
-        result_bytes = decompress_zstd_to_bytes(compressed_data)
+        result = decompress_zstd_to_text(compressed_data, encoding=encoding)
+        text_bytes = len(result.encode(encoding))
         _log.info(
-            "バイナリオブジェクトを読み込みました",
+            "テキストオブジェクトを読み込みました",
             bucket=bucket_name,
             object_key=object_key,
-            bytes=len(result_bytes),
+            bytes=text_bytes,
         )
-        return result_bytes
+        return result
     except Exception as error:
         _log.exception(
             "オブジェクトの読み込みに失敗しました",
@@ -122,7 +109,7 @@ def load_object(
             object_key=object_key,
             error=str(error),
         )
-        return "" if as_text else b""
+        return None
 
 
 def search_object_keys(
@@ -192,14 +179,6 @@ def _build_object_path(
     return root / bucket_name / shard / file_name
 
 
-def _to_compressed_bytes(
-    payload: Union[bytes, str], *, encoding: str = "utf-8"
-) -> bytes:
-    """入力データをZstandard圧縮済みバイト列に変換する"""
-
-    if isinstance(payload, bytes):
-        return compress_bytes_to_zstd(payload)
-    return compress_text_to_zstd(payload, encoding=encoding)
 
 
 def _normalize_parallel(parallel: bool | int, item_count: int) -> int:
@@ -224,10 +203,9 @@ def load_objects(
     object_keys: list[str],
     *,
     parallel: bool | int = False,
-    as_text: bool = False,
     storage_root: Path | str = DEFAULT_STORAGE_ROOT,
-) -> dict[str, Union[bytes, str]]:
-    """複数のオブジェクトを並列取得する。keyごとに成功/失敗の結果を返す"""
+) -> dict[str, str | None]:
+    """複数のオブジェクトを並列取得する。失敗したkeyにはNoneを設定"""
 
     if not object_keys:
         return {}
@@ -236,25 +214,23 @@ def load_objects(
 
     # 逐次実行
     if worker_count <= 1:
-        results: dict[str, Union[bytes, str]] = {}
+        results: dict[str, str | None] = {}
         for key in object_keys:
             results[key] = load_object(
                 bucket_name=bucket_name,
                 object_key=key,
                 storage_root=storage_root,
-                as_text=as_text,
             )
         return results
 
     # 並列実行
-    results_dict: dict[str, Union[bytes, str]] = {}
+    results_dict: dict[str, str | None] = {}
 
-    def load_single(key: str) -> tuple[str, Union[bytes, str]]:
+    def load_single(key: str) -> tuple[str, str | None]:
         content = load_object(
             bucket_name=bucket_name,
             object_key=key,
             storage_root=storage_root,
-            as_text=as_text,
         )
         return (key, content)
 
@@ -275,7 +251,7 @@ class TestMod:
             目的: テキストを圧縮して保存し復元できることを確認する。
             検証観点:
                 - save_object がテキスト入力を受け付ける。
-                - load_object(as_text=True) で元テキストが復元できる。
+                - load_object で元テキストが復元できる。
         """
 
         text = "テキストデータの保存テスト"
@@ -294,33 +270,8 @@ class TestMod:
         )
         assert saved_path.exists()
 
-        loaded = load_object("objects", key, storage_root=storage_root, as_text=True)
+        loaded = load_object("objects", key, storage_root=storage_root)
         assert loaded == text
-
-    def test_save_and_load_bytes(self, fs: FakeFilesystem) -> None:
-        """
-        docs:
-            目的: バイト列を圧縮して保存し復元できることを確認する。
-            検証観点:
-                - save_object がバイト列入力を受け付ける。
-                - load_object(as_text=False) で元バイト列が復元できる。
-        """
-
-        payload = b"binary-data" * 4
-        fs.create_dir("/data")
-        storage_root = Path("/data/bucket")
-
-        key = save_object(
-            payload,
-            bucket_name="bin",
-            object_key="bytes",
-            storage_root=storage_root,
-        )
-        assert key == "bytes"
-
-        loaded = load_object("bin", key, storage_root=storage_root)
-        assert isinstance(loaded, bytes)
-        assert loaded == payload
 
     def test_search_object_keys(self, fs: FakeFilesystem) -> None:
         """
@@ -358,17 +309,15 @@ class TestMod:
         docs:
             目的: 未保存データに対するエラーハンドリングを確認する。
             検証観点:
-                - 存在しないキー読み込み時に空文字列を返す。
+                - 存在しないキー読み込み時にNoneを返す。
                 - 存在しないバケット検索時に空リストを返す。
         """
 
         fs.create_dir("/data")
         storage_root = Path("/data/bucket")
 
-        result = load_object(
-            "objects", "missing", storage_root=storage_root, as_text=True
-        )
-        assert result == ""
+        result = load_object("objects", "missing", storage_root=storage_root)
+        assert result is None
 
         keys = search_object_keys("objects", storage_root=storage_root)
         assert keys == []
@@ -379,7 +328,7 @@ class TestMod:
             目的: 複数のオブジェクトを一括取得できることを確認する。
             検証観点:
                 - 複数のkeyを指定して対応するオブジェクトが取得できる。
-                - 返り値がdict[str, Union[bytes, str]]である。
+                - 返り値がdict[str, str | None]である。
         """
 
         fs.create_dir("/data")
@@ -392,9 +341,7 @@ class TestMod:
         save_object("content3", "test", "key3", storage_root=storage_root)
 
         # 一括取得
-        results = load_objects(
-            "test", test_keys, storage_root=storage_root, as_text=True
-        )
+        results = load_objects("test", test_keys, storage_root=storage_root)
 
         assert len(results) == len(test_keys)
         assert results["key1"] == "content1"
@@ -404,9 +351,9 @@ class TestMod:
     def test_load_objects_handles_missing_keys(self, fs: FakeFilesystem) -> None:
         """
         docs:
-            目的: 一部のkeyが存在しない場合、空文字列が返ることを確認する。
+            目的: 一部のkeyが存在しない場合、Noneが返ることを確認する。
             検証観点:
-                - 存在しないkeyには空文字列（as_text=True時）が設定される。
+                - 存在しないkeyにはNoneが設定される。
                 - 存在するkeyは正常に取得できる。
         """
 
@@ -418,13 +365,11 @@ class TestMod:
 
         # 存在するkey/しないkeyを混在させて取得
         test_keys = ["exists", "missing"]
-        results = load_objects(
-            "test", test_keys, storage_root=storage_root, as_text=True
-        )
+        results = load_objects("test", test_keys, storage_root=storage_root)
 
         assert len(results) == len(test_keys)
         assert results["exists"] == "exists"
-        assert results["missing"] == ""
+        assert results["missing"] is None
 
     def test_load_objects_returns_empty_dict_for_empty_list(
         self, fs: FakeFilesystem
@@ -439,5 +384,5 @@ class TestMod:
         fs.create_dir("/data")
         storage_root = Path("/data/bucket")
 
-        results = load_objects("test", [], storage_root=storage_root, as_text=True)
+        results = load_objects("test", [], storage_root=storage_root)
         assert results == {}

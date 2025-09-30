@@ -63,11 +63,7 @@ class TestMod:
         saved_key = save_article_content(article)
 
         assert saved_key == article.id
-        stored_html = load_object(
-            bucket_name=BUCKET_NAME,
-            object_key=article.id,
-            as_text=True,
-        )
+        stored_html = load_object(bucket_name=BUCKET_NAME, object_key=article.id)
         assert stored_html == "<html>body</html>"
 
     def test_save_article_content_raises_on_save_failure(self, fs, monkeypatch) -> None:
