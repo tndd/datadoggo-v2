@@ -20,12 +20,15 @@ def app_logging(fs: FakeFilesystem):
     reset_logging()
 
 
-@pytest.fixture(scope="function", autouse=True)
-def reset_db_engine():
-    """各テスト実行前にDBエンジンキャッシュをクリア"""
+@pytest.fixture(autouse=True)
+def initialize_test_db():
+    """各テスト実行前に自動的にDBを初期化"""
     import infra.storage.rds
+    from infra.storage.rds import initialize_database
 
-    # テスト間でエンジンがキャッシュされている場合にクリア
+    # テスト開始前にエンジンキャッシュをクリア
     if hasattr(infra.storage.rds, "_test_engine"):
         infra.storage.rds._test_engine = None
-    yield
+
+    # DBを初期化（新しいエンジンでテーブル作成）
+    initialize_database()

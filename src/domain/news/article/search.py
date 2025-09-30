@@ -75,11 +75,10 @@ class Tests:
             if not fs.exists("/tmp"):
                 fs.create_dir("/tmp")
 
-            from infra.storage.rds import create_sqlite_engine, initialize_database
+            from infra.storage.rds import create_sqlite_engine
 
-            # pytestにより自動的にインメモリDBが使用される
+            # pytestにより自動的にインメモリDBが使用される（fixtureで初期化済み）
             engine = create_sqlite_engine()
-            initialize_database(engine)
 
             with session_scope(engine) as session:
                 # Feedレコードを作成
@@ -135,11 +134,10 @@ class Tests:
             if not fs.exists("/tmp"):
                 fs.create_dir("/tmp")
 
-            from infra.storage.rds import create_sqlite_engine, initialize_database
+            from infra.storage.rds import create_sqlite_engine
 
-            # pytestにより自動的にインメモリDBが使用される
+            # pytestにより自動的にインメモリDBが使用される（fixtureで初期化済み）
             engine = create_sqlite_engine()
-            initialize_database(engine)
 
             with session_scope(engine) as session:
                 # 未登録IDのテスト

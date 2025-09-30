@@ -6,7 +6,7 @@ from datetime import datetime
 
 from sqlmodel import select
 
-from infra.storage.rds import initialize_database, session_scope
+from infra.storage.rds import session_scope
 
 from ..common import ensure_saved_at
 from .model import FeedItem, FeedRecord
@@ -16,7 +16,6 @@ from .service import create_feed, feed_to_record, record_to_feed
 def store_feed(feed: FeedItem) -> FeedItem:
     """Feedを保存し、保存後の状態を返す"""
 
-    initialize_database()
     with session_scope() as session:
         normalized = feed.model_copy(update={"updated_at": ensure_saved_at()})
         record = feed_to_record(normalized)

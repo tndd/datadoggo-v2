@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import desc
 from sqlmodel import select
 
-from infra.storage.rds import initialize_database, session_scope
+from infra.storage.rds import session_scope
 
 from .model import FeedItem, FeedRecord
 from .service import record_to_feed
@@ -30,7 +30,6 @@ class FeedQuery(BaseModel):
 def find_feed_by_id(feed_id: str) -> FeedItem | None:
     """IDでFeedを検索し、存在すれば返す"""
 
-    initialize_database()
     with session_scope() as session:
         statement = select(FeedRecord).where(FeedRecord.id == feed_id)
         record = session.exec(statement).first()
@@ -43,7 +42,6 @@ def find_feed_by_id(feed_id: str) -> FeedItem | None:
 def search_feeds(query: FeedQuery) -> list[FeedItem]:
     """Feedをページングして取得する"""
 
-    initialize_database()
     with session_scope() as session:
         statement = select(FeedRecord)
 
