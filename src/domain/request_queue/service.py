@@ -12,11 +12,11 @@ from xml.etree.ElementTree import Element
 import pytest
 from pydantic import ValidationError
 
+from domain.common import ensure_http_url, ensure_saved_at
 from infra.compute import hash_text_sha256
 from infra.logging import get_logger
 from infra.parse import parse_rss
 
-from ..common import ensure_http_url, ensure_saved_at
 from .model import HttpRequest, HttpRequestRecord
 
 DEFAULT_FEED_STATUS_CODE = None
@@ -196,7 +196,7 @@ class TestMod:
                 - titleがdescriptionとして設定される。
         """
 
-        fixture_path = Path(__file__).resolve().parents[4] / "mock" / "google_news.rss"
+        fixture_path = Path(__file__).resolve().parents[3] / "mock" / "google_news.rss"
         content = fixture_path.read_bytes()
         root = parse_rss(content)
 

@@ -6,9 +6,9 @@ from datetime import datetime
 
 from sqlmodel import select
 
+from domain.common import ensure_saved_at
 from infra.storage.rds import session_scope
 
-from ..common import ensure_saved_at
 from .model import HttpRequest, HttpRequestRecord
 from .service import create_http_request, http_request_to_record, record_to_http_request
 
