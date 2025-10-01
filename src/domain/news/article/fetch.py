@@ -23,7 +23,7 @@ def fetch_article_content(
     except RuntimeError:  # pragma: no cover - ネットワーク例外のログ確認
         _log.exception(
             "記事HTML取得中にネットワークエラーが発生しました",
-            feed_id=request.id,
+            http_request_id=request.id,
             url=str(request.url),
         )
         return None
@@ -31,7 +31,7 @@ def fetch_article_content(
     if response.status_code != HTTP_STATUS_OK:
         _log.warning(
             "記事HTMLの取得に失敗しました",
-            feed_id=request.id,
+            http_request_id=request.id,
             url=str(request.url),
             status_code=response.status_code,
         )
@@ -52,7 +52,7 @@ def fetch_article_content(
     )
     _log.info(
         "記事HTMLの取得に成功しました",
-        feed_id=request.id,
+        http_request_id=request.id,
         url=str(request.url),
         bytes=len(response.body),
     )
