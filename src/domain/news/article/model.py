@@ -20,9 +20,11 @@ class Article(BaseModel):
 
     id: str
     url: HttpUrl
-    title: str
-    pub_date: datetime
-    html_content: str
+    description: str | None  # RSS item の <title> が格納される
+    pub_date: datetime  # RSS item の <pubDate> が格納される
+    content: str  # 記事のHTMLコンテンツ
+    created_at: datetime  # バケット保存時のタイムスタンプ
+    updated_at: datetime  # バケット保存時のタイムスタンプ
 
 
 class TestMod:
@@ -35,6 +37,7 @@ class TestMod:
             検証観点:
                 - HTML文字列が格納される。
                 - Feed由来の属性が保持される。
+                - description が nullable であることを確認する。
         """
 
         from datetime import datetime, timezone
@@ -46,10 +49,25 @@ class TestMod:
         article = Article(
             id="abc",
             url=cast(HttpUrl, "https://example.com/article"),
-            title="テスト記事",
+            description="テスト記事",
             pub_date=base_time,
-            html_content="<html>content</html>",
+            content="<html>content</html>",
+            created_at=base_time,
+            updated_at=base_time,
         )
 
-        assert article.html_content == "<html>content</html>"
+        assert article.content == "<html>content</html>"
         assert article.pub_date == base_time
+        assert article.description == "テスト記事"
+
+        # description が None でも生成可能
+        article_no_desc = Article(
+            id="xyz",
+            url=cast(HttpUrl, "https://example.com/no-title"),
+            description=None,
+            pub_date=base_time,
+            content="<html>no title</html>",
+            created_at=base_time,
+            updated_at=base_time,
+        )
+        assert article_no_desc.description is None

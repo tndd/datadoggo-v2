@@ -38,13 +38,18 @@ def fetch_article_content(
         )
         return None
 
+    from datetime import datetime, timezone
+
     html = _decode_body(response)
+    now = datetime.now(timezone.utc)
     article = Article(
         id=request.id,
         url=request.url,
-        title=request.description or "",
+        description=request.description,
         pub_date=request.created_at,
-        html_content=html,
+        content=html,
+        created_at=now,
+        updated_at=now,
     )
     _log.info(
         "記事HTMLの取得に成功しました",
@@ -71,7 +76,8 @@ class TestMod:
             目的: ステータス200の場合にArticleが生成されることを確認する。
             検証観点:
                 - HTML本文がデコードされる。
-                - FeedItemの属性が引き継がれる。
+                - HttpRequestの属性が引き継がれる。
+                - description が nullable であることを確認する。
         """
 
         from datetime import datetime, timezone
@@ -113,8 +119,25 @@ class TestMod:
         article = fetch_article_content(request, client=client)
 
         assert article is not None
-        assert article.html_content == html_text
+        assert article.content == html_text
         assert article.id == request.id
+        assert article.description == "テスト"
+
+        # description が None のケース
+        request_no_desc = HttpRequest(
+            id="xyz",
+            url=cast(HttpUrl, "https://example.com/no-title"),
+            description=None,
+            group="test:fetch",
+            status_code=200,
+            created_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
+            updated_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
+        )
+
+        article_no_desc = fetch_article_content(request_no_desc, client=client)
+
+        assert article_no_desc is not None
+        assert article_no_desc.description is None
 
     def test_fetch_article_content_returns_none_on_error_status(self) -> None:
         """

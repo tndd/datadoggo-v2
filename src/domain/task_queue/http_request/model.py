@@ -29,7 +29,7 @@ class HttpRequest(BaseModel):
 
     def is_backlog(self) -> bool:
         """通信未実行または通信失敗を表す"""
-        return self.status_code is not SUCCESS_STATUS_CODE
+        return not self.is_success()
 
 
 class HttpRequestRecord(SQLModel, table=True):
@@ -55,8 +55,10 @@ class TestMod:
             目的:
                 ステータスコードに応じた成功/失敗判定を確認する。
             検証観点:
-                - 200 の場合 is_success が True。
-                - 200 以外または None の場合 is_backlog が True。
+                - 200 の場合 is_success が True、is_backlog が False。
+                - 200 以外または None の場合 is_backlog が True、
+                  is_success が False。
+                - is_success と is_backlog が相互排他的。
         """
 
         from datetime import datetime, timezone
@@ -69,6 +71,7 @@ class TestMod:
 
         url_value = cast(HttpUrl, "https://example.com/rss")
 
+        # status_code=200 の場合
         success = HttpRequest(
             id="abc",
             url=url_value,
@@ -79,6 +82,14 @@ class TestMod:
             updated_at=base_time,
         )
         assert success.is_success()
+        assert not success.is_backlog()
 
-        backlog = success.model_copy(update={"status_code": None})
-        assert backlog.is_backlog()
+        # status_code=None の場合
+        backlog_none = success.model_copy(update={"status_code": None})
+        assert backlog_none.is_backlog()
+        assert not backlog_none.is_success()
+
+        # status_code=404 の場合
+        backlog_error = success.model_copy(update={"status_code": 404})
+        assert backlog_error.is_backlog()
+        assert not backlog_error.is_success()

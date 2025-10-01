@@ -13,7 +13,7 @@ def save_article_content(article: Article) -> str:
     """記事のHTMLコンテンツをバケットに保存する"""
 
     saved_key = save_object(
-        payload=article.html_content,
+        payload=article.content,
         bucket_name=BUCKET_NAME,
         object_key=article.id,
     )
@@ -52,12 +52,15 @@ class TestMod:
             fs.create_dir(str(project_root))
         os.chdir(project_root)
 
+        base_time = datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc)
         article = Article(
             id="abc",
             url=cast(HttpUrl, "https://example.com/article"),
-            title="サンプル",
-            pub_date=datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc),
-            html_content="<html>body</html>",
+            description="サンプル",
+            pub_date=base_time,
+            content="<html>body</html>",
+            created_at=base_time,
+            updated_at=base_time,
         )
 
         saved_key = save_article_content(article)
@@ -79,12 +82,15 @@ class TestMod:
 
         from pydantic import HttpUrl
 
+        base_time = datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc)
         article = Article(
             id="xyz",
             url=cast(HttpUrl, "https://example.com/failure"),
-            title="失敗",
-            pub_date=datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc),
-            html_content="<html>failure</html>",
+            description="失敗",
+            pub_date=base_time,
+            content="<html>failure</html>",
+            created_at=base_time,
+            updated_at=base_time,
         )
 
         import sys

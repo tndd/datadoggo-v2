@@ -35,9 +35,11 @@ def find_article_by_id(session: Session, feed_id: str) -> Article | None:
     return Article(
         id=feed_record.id,
         url=ensure_http_url(feed_record.url),
-        title=feed_record.description or "",
+        description=feed_record.description,
         pub_date=feed_record.created_at,
-        html_content=html_content,
+        content=html_content,
+        created_at=feed_record.created_at,
+        updated_at=feed_record.updated_at,
     )
 
 
@@ -85,9 +87,11 @@ def search_articles_by_ids(
         results[feed_id] = Article(
             id=record.id,
             url=ensure_http_url(record.url),
-            title=record.description or "",
+            description=record.description,
             pub_date=record.created_at,
-            html_content=html_content,
+            content=html_content,
+            created_at=record.created_at,
+            updated_at=record.updated_at,
         )
 
     return results
@@ -148,16 +152,18 @@ class TestMod:
             article = Article(
                 id="article_test",
                 url=cast(HttpUrl, "https://example.com/article"),
-                title="記事",
+                description="記事",
                 pub_date=feed_time,
-                html_content="<html>article</html>",
+                content="<html>article</html>",
+                created_at=feed_time,
+                updated_at=feed_time,
             )
             save_article_content(article)
 
             # 取得テスト
             retrieved = find_article_by_id(session, "article_test")
             assert retrieved is not None
-            assert retrieved.html_content == "<html>article</html>"
+            assert retrieved.content == "<html>article</html>"
 
     def test_find_article_by_id_returns_none_when_missing(self, fs) -> None:
         """
@@ -268,9 +274,11 @@ class TestMod:
                 article = Article(
                     id=f"article_{i}",
                     url=cast(HttpUrl, f"https://example.com/article/{i}"),
-                    title=f"記事{i}",
+                    description=f"記事{i}",
                     pub_date=feed_time,
-                    html_content=f"<html>article{i}</html>",
+                    content=f"<html>article{i}</html>",
+                    created_at=feed_time,
+                    updated_at=feed_time,
                 )
                 save_article_content(article)
 
@@ -284,9 +292,9 @@ class TestMod:
             assert retrieved["article_0"] is not None
             assert retrieved["article_1"] is not None
             assert retrieved["article_2"] is not None
-            assert retrieved["article_0"].html_content == "<html>article0</html>"
-            assert retrieved["article_1"].html_content == "<html>article1</html>"
-            assert retrieved["article_2"].html_content == "<html>article2</html>"
+            assert retrieved["article_0"].content == "<html>article0</html>"
+            assert retrieved["article_1"].content == "<html>article1</html>"
+            assert retrieved["article_2"].content == "<html>article2</html>"
 
     def test_search_articles_by_ids_skips_failures(self, fs) -> None:
         """
@@ -369,9 +377,11 @@ class TestMod:
             article = Article(
                 id="success",
                 url=cast(HttpUrl, "https://example.com/success"),
-                title="成功",
+                description="成功",
                 pub_date=feed_time,
-                html_content="<html>success</html>",
+                content="<html>success</html>",
+                created_at=feed_time,
+                updated_at=feed_time,
             )
             save_article_content(article)
 
@@ -388,7 +398,7 @@ class TestMod:
 
             # 成功したもののみがArticle、失敗はNone
             assert retrieved["success"] is not None
-            assert retrieved["success"].html_content == "<html>success</html>"
+            assert retrieved["success"].content == "<html>success</html>"
             assert retrieved["failed_status"] is None
             assert retrieved["no_bucket"] is None
             assert retrieved["missing"] is None
