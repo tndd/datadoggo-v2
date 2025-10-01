@@ -27,9 +27,7 @@ def fetch_http_requests_from_query(
         # RssItemからgroupを取得（group:nameの形式）
         rss_item = rss_items[i]
         group = f"{rss_item.group}:{rss_item.name}"
-        http_requests.extend(
-            convert_rss_element_to_http_requests(element, group=group)
-        )
+        http_requests.extend(convert_rss_element_to_http_requests(element, group=group))
 
     return http_requests
 
@@ -43,10 +41,11 @@ class TestMod:
         """
         docs:
             目的:
-                RssItemQuery で指定したリンクの HttpRequestTask が取得できることを確認する。
+                RssItemQuery で指定したリンクの HttpRequestTask が
+                取得できることを確認する。
             検証観点:
                 - group 指定で絞り込まれたリンクのみが通信される。
-                - 返却された HttpRequestTask からdescription, url, groupが読み取れる。
+                - HttpRequestTaskからdescription, url, groupが読み取れる。
         """
 
         yaml_path = tmp_path / "links.yml"
@@ -110,8 +109,10 @@ class TestMod:
             client=client,
         )
 
+        expected_request_count = 2
+
         assert set(fetched_urls) == set(rss_payloads)
-        assert len(http_requests) == 2
+        assert len(http_requests) == expected_request_count
         descriptions = {req.description for req in http_requests}
         assert descriptions == {"Headline Article", "Latest Article"}
         groups = {req.group for req in http_requests}

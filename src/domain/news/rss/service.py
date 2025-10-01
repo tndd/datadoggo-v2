@@ -12,11 +12,10 @@ from xml.etree.ElementTree import Element
 import pytest
 from pydantic import ValidationError
 
+from domain.task_queue.http_request.model import HttpRequestTask
 from domain.task_queue.http_request.service import create_http_request
 from infra.logging import get_logger
 from infra.parse import parse_rss
-
-from domain.task_queue.http_request.model import HttpRequestTask
 
 DEFAULT_HTTP_REQUEST_STATUS_CODE = None
 _log = get_logger()
