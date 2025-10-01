@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+from pyfakefs.fake_filesystem import FakeFilesystem
+
 from infra.api.browser.extract import (
     ExtractMode,
     _parse_to_markdown,
@@ -11,7 +13,7 @@ from infra.api.browser.extract import (
 from infra.storage.file import load_file
 
 
-def test_extract_page_content() -> None:
+def test_extract_page_content(fs: FakeFilesystem) -> None:
     """
     docs:
         目的: extract_page_content の各モードでの変換動作を確認する。
@@ -23,6 +25,7 @@ def test_extract_page_content() -> None:
     """
     # プロジェクトルートから計算
     project_root = Path(__file__).parent.parent.parent.parent
+    fs.add_real_directory(project_root / "mock", read_only=True)
     html = load_file(str(project_root / "mock/plain.html"))
 
     # HTMLモード
@@ -47,7 +50,7 @@ def test_extract_page_content() -> None:
         pass
 
 
-def test_parse_html_to_text() -> None:
+def test_parse_html_to_text(fs: FakeFilesystem) -> None:
     """
     docs:
         目的: _parse_to_text の基本的なHTML→テキスト変換を確認する。
@@ -56,8 +59,8 @@ def test_parse_html_to_text() -> None:
             - スクリプトやスタイルが除去される
             - テキスト内容が適切に抽出される
     """
-    # プロジェクトルートから計算
     project_root = Path(__file__).parent.parent.parent.parent
+    fs.add_real_directory(project_root / "mock", read_only=True)
     html = load_file(str(project_root / "mock/plain.html"))
     text = _parse_to_text(html)
 
@@ -69,7 +72,7 @@ def test_parse_html_to_text() -> None:
     assert "Rust言語の新機能について" in text
 
 
-def test_parse_html_to_markdown() -> None:
+def test_parse_html_to_markdown(fs: FakeFilesystem) -> None:
     """
     docs:
         目的: _parse_to_markdown の基本的なHTML→Markdown変換を確認する。
@@ -78,8 +81,8 @@ def test_parse_html_to_markdown() -> None:
             - 見出しが # 記法になる
             - リストやテーブルが適切に変換される
     """
-    # プロジェクトルートから計算
     project_root = Path(__file__).parent.parent.parent.parent
+    fs.add_real_directory(project_root / "mock", read_only=True)
     html = load_file(str(project_root / "mock/plain.html"))
     markdown = _parse_to_markdown(html)
 
@@ -89,7 +92,7 @@ def test_parse_html_to_markdown() -> None:
     assert "* " in markdown or "- " in markdown  # リストの変換確認
 
 
-def test_parse_empty_html() -> None:
+def test_parse_empty_html(fs: FakeFilesystem) -> None:
     """
     docs:
         目的: 空のHTMLや無効なHTMLに対する関数の挙動を確認する。

@@ -24,7 +24,6 @@ def test_save_and_load_text(fs: FakeFilesystem) -> None:
     """
 
     text = "テキストデータの保存テスト"
-    fs.create_dir("/data")
     storage_root = Path("/data/bucket")
 
     key = save_object(
@@ -51,7 +50,6 @@ def test_search_object_keys(fs: FakeFilesystem) -> None:
             - バケット内ファイルがキーとして検出される。
     """
 
-    fs.create_dir("/data")
     storage_root = Path("/data/bucket")
 
     key1 = save_object(
@@ -80,7 +78,6 @@ def test_error_handling(fs: FakeFilesystem) -> None:
             - 存在しないバケット検索時に空リストを返す。
     """
 
-    fs.create_dir("/data")
     storage_root = Path("/data/bucket")
 
     result = load_object("objects", "missing", storage_root=storage_root)
@@ -99,7 +96,6 @@ def test_load_objects_returns_multiple_objects(fs: FakeFilesystem) -> None:
             - 返り値がdict[str, str | None]である。
     """
 
-    fs.create_dir("/data")
     storage_root = Path("/data/bucket")
 
     # 複数オブジェクトを保存
@@ -126,7 +122,6 @@ def test_load_objects_handles_missing_keys(fs: FakeFilesystem) -> None:
             - 存在するkeyは正常に取得できる。
     """
 
-    fs.create_dir("/data")
     storage_root = Path("/data/bucket")
 
     # 一部のみ保存
@@ -151,7 +146,6 @@ def test_load_objects_returns_empty_dict_for_empty_list(
             - object_keys=[] で空dictが返る。
     """
 
-    fs.create_dir("/data")
     storage_root = Path("/data/bucket")
 
     results = load_objects("test", [], storage_root=storage_root)
