@@ -1,4 +1,4 @@
-"""HttpRequestテーブルへの書き込み処理(CQRSのコマンド側)"""
+"""HttpRequestTaskをhttp_request_queueテーブルへ書き込む処理(CQRSのコマンド側)"""
 
 from __future__ import annotations
 
@@ -9,12 +9,12 @@ from sqlmodel import select
 from domain.common import ensure_saved_at
 from infra.storage.rds import session_scope
 
-from .model import HttpRequest, HttpRequestRecord
+from .model import HttpRequestTask, HttpRequestTaskRecord
 from .service import create_http_request, http_request_to_record, record_to_http_request
 
 
-def store_http_request(request: HttpRequest) -> HttpRequest:
-    """HttpRequestを保存し、保存後の状態を返す"""
+def store_http_request(request: HttpRequestTask) -> HttpRequestTask:
+    """HttpRequestTaskを保存し、保存後の状態を返す"""
 
     with session_scope() as session:
         normalized = request.model_copy(update={"updated_at": ensure_saved_at()})
@@ -31,9 +31,9 @@ class TestMod:
         docs:
             目的:
                 store_http_request が永続化を行い、戻り値として最新状態の
-                HttpRequest を返すことを確認する。
+                HttpRequestTask を返すことを確認する。
             検証観点:
-                - create_http_request で生成した HttpRequest が
+                - create_http_request で生成した HttpRequestTask が
                   store_http_request で保存される。
                 - 保存後に同一IDのレコードがDB上に存在する。
                 - created_at が保持され、updated_at が更新される。
@@ -55,8 +55,8 @@ class TestMod:
         assert stored.updated_at >= stored.created_at
 
         with session_scope() as session:
-            statement = select(HttpRequestRecord).where(
-                HttpRequestRecord.id == request.id
+            statement = select(HttpRequestTaskRecord).where(
+                HttpRequestTaskRecord.id == request.id
             )
             record = session.exec(statement).first()
             assert record is not None

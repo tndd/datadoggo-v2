@@ -40,8 +40,8 @@ Python は4スペースインデント、型ヒント必須、テキストコメ
 環境変数の設定は不要です。資格情報やトークンは `.env` などの秘匿ファイルに保存し、リポジトリにはコミットしないでください。外部サービスとの通信が必要なテストはオンライン専用マーカーで隔離し、誤って本番エンドポイントへ負荷を掛けないよう注意します。
 
 ## データベース更新時の注意
-- **テーブル名変更**: `feed_item` → `http_request` に変更。
-- **モデル名変更**: `FeedItem` → `HttpRequest`, `FeedRecord` → `HttpRequestRecord` に変更。
+- **テーブル名変更**: `feed_item` → `http_request_queue` に変更。
+- **モデル名変更**: `FeedItem` → `HttpRequestTask`, `FeedRecord` → `HttpRequestTaskRecord` に変更。
 - **ディレクトリ構造変更**: `src/domain/news/feed/` → `src/domain/task_queue/http_request/` に移動。
   - HTTPリクエスト管理はニュース固有ではないため、汎用的なtask_queue配下に配置。
 - **フィールド変更**:
@@ -68,9 +68,9 @@ Python は4スペースインデント、型ヒント必須、テキストコメ
 ## Article機能の実装ガイド
 - ドメイン構成は `fetch.py`（HTML取得で `Article` を生成）、`command.py`（バケット保存）、`search.py`（`Article` 再構築）のシンプルな三層構成。
 - `save_article_content` は `Article` を受け取り、HTMLをバケットに保存。DBへのメタデータ保存は廃止。
-- バケットキーは HttpRequest のハッシュIDそのものを使用し、保存先は `data/bucket/article/<shard>/` 配下。テストでは `pyfakefs` の `fs` フィクスチャで仮想化する。
-- `find_article_by_id` は `HttpRequestRecord` からメタデータを取得し、バケットからHTMLを取得して `Article` を再構築する。`status_code` が200以外の場合は `None` を返す。
-- `fetch_article_content` は `HttpRequest` を引数に取り、記事HTMLを取得して `Article` を生成する。`description` が `None` の場合は空文字列を使用する。
+- バケットキーは HttpRequestTask のハッシュIDそのものを使用し、保存先は `data/bucket/article/<shard>/` 配下。テストでは `pyfakefs` の `fs` フィクスチャで仮想化する。
+- `find_article_by_id` は `HttpRequestTaskRecord` からメタデータを取得し、バケットからHTMLを取得して `Article` を再構築する。`status_code` が200以外の場合は `None` を返す。
+- `fetch_article_content` は `HttpRequestTask` を引数に取り、記事HTMLを取得して `Article` を生成する。`description` が `None` の場合は空文字列を使用する。
 
 ## docsの更新
 issueの更新についてだが、closed下の文書についての更新は不要です。

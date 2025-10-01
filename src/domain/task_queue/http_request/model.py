@@ -1,4 +1,4 @@
-"""HttpRequestドメインモデル群"""
+"""HttpRequestTaskドメインモデル群"""
 
 from __future__ import annotations
 
@@ -11,8 +11,8 @@ from sqlmodel import SQLModel
 SUCCESS_STATUS_CODE = 200
 
 
-class HttpRequest(BaseModel):
-    """HttpRequestテーブルの要素のドメイン表現"""
+class HttpRequestTask(BaseModel):
+    """http_request_queueテーブルの要素を表すドメインモデル"""
 
     id: str
     url: HttpUrl
@@ -31,8 +31,8 @@ class HttpRequest(BaseModel):
         return not self.is_success()
 
 
-class HttpRequestRecord(SQLModel, table=True):
-    """SQLModelによるHttpRequestテーブル定義"""
+class HttpRequestTaskRecord(SQLModel, table=True):
+    """SQLModelによるhttp_request_queueテーブル定義"""
 
     __tablename__: str = "http_request_queue"  # pyright: ignore[reportIncompatibleVariableOverride]
 
@@ -70,7 +70,7 @@ class TestMod:
         url_value = HttpUrl("https://example.com/rss")
 
         # status_code=200 の場合
-        success = HttpRequest(
+        success = HttpRequestTask(
             id="abc",
             url=url_value,
             description="example",
@@ -93,7 +93,7 @@ class TestMod:
         assert not backlog_error.is_success()
 
         # group が None でも生成可能
-        no_group = HttpRequest(
+        no_group = HttpRequestTask(
             id="xyz",
             url=url_value,
             description="no group",

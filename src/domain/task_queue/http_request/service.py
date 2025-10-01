@@ -1,4 +1,4 @@
-"""HttpRequest向け共通サービスユーティリティ"""
+"""HttpRequestTask向け共通サービスユーティリティ"""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from infra.compute import hash_text_sha256
 from infra.logging import get_logger
 from infra.parse import parse_rss
 
-from .model import HttpRequest, HttpRequestRecord
+from .model import HttpRequestTask, HttpRequestTaskRecord
 
 DEFAULT_FEED_STATUS_CODE = None
 _log = get_logger()
@@ -30,14 +30,14 @@ def create_http_request(
     group: str | None,
     status_code: int | None,
     created_at: datetime | None = None,
-) -> HttpRequest:
-    """入力値からHttpRequestドメインモデルを生成する"""
+) -> HttpRequestTask:
+    """入力値からHttpRequestTaskドメインモデルを生成する"""
 
     request_id = hash_text_sha256(url)
     normalized_created_at = ensure_saved_at(created_at)
     normalized_updated_at = normalized_created_at
 
-    return HttpRequest(
+    return HttpRequestTask(
         id=request_id,
         url=ensure_http_url(url),
         description=description,
@@ -48,10 +48,10 @@ def create_http_request(
     )
 
 
-def http_request_to_record(request: HttpRequest) -> HttpRequestRecord:
-    """HttpRequestドメインモデルを永続化レコードへ変換する"""
+def http_request_to_record(request: HttpRequestTask) -> HttpRequestTaskRecord:
+    """HttpRequestTaskドメインモデルを永続化レコードへ変換する"""
 
-    return HttpRequestRecord(
+    return HttpRequestTaskRecord(
         id=request.id,
         url=str(request.url),
         description=request.description,
@@ -62,10 +62,10 @@ def http_request_to_record(request: HttpRequest) -> HttpRequestRecord:
     )
 
 
-def record_to_http_request(record: HttpRequestRecord) -> HttpRequest:
-    """永続化レコードをHttpRequestドメインモデルに変換する"""
+def record_to_http_request(record: HttpRequestTaskRecord) -> HttpRequestTask:
+    """永続化レコードをHttpRequestTaskドメインモデルに変換する"""
 
-    return HttpRequest(
+    return HttpRequestTask(
         id=record.id,
         url=ensure_http_url(record.url),
         description=record.description,
@@ -81,11 +81,11 @@ def convert_rss_items_to_http_requests(
     *,
     group: str | None,
     default_status_code: int | None = DEFAULT_FEED_STATUS_CODE,
-) -> list[HttpRequest]:
-    """RSSのitem要素をHttpRequestリストに変換する"""
+) -> list[HttpRequestTask]:
+    """RSSのitem要素をHttpRequestTaskリストに変換する"""
 
     channel = _extract_channel(root)
-    http_requests: list[HttpRequest] = []
+    http_requests: list[HttpRequestTask] = []
 
     for item in channel.findall("item"):
         link = _extract_text(item, "link")
@@ -111,7 +111,7 @@ def convert_rss_items_to_http_requests(
             )
         except (ValueError, ValidationError) as exc:
             _log.warning(
-                "invalid http request item skipped",
+                "invalid http request task item skipped",
                 rss_group=group,
                 request_url=link,
                 error_type=type(exc).__name__,
@@ -189,9 +189,9 @@ class TestMod:
         """
         docs:
             目的:
-                RSSモックファイルからHttpRequestリストが生成されることを確認する。
+                RSSモックファイルからHttpRequestTaskリストが生成されることを確認する。
             検証観点:
-                - item要素からHttpRequestが生成される。
+                - item要素からHttpRequestTaskが生成される。
                 - pubDateがcreated_atとしてUTCのdatetimeに変換される。
                 - titleがdescriptionとして設定される。
         """
@@ -202,7 +202,7 @@ class TestMod:
 
         items = convert_rss_items_to_http_requests(root, group="mock:google")
 
-        assert items, "HttpRequestが1件以上生成されること"
+        assert items, "HttpRequestTaskが1件以上生成されること"
         first = items[0]
         assert first.description and first.description.startswith(
             "Stocks dip as dollar rises"
@@ -221,7 +221,7 @@ class TestMod:
                 必須要素が欠けたitemをスキップすることを確認する。
             検証観点:
                 - linkが欠けたitemは結果に含まれない。
-                - 妥当なitemのみがHttpRequestとして返る。
+                - 妥当なitemのみがHttpRequestTaskとして返る。
         """
 
         rss_xml = """
@@ -254,7 +254,7 @@ class TestMod:
                 URLが不正なitemが全体処理を止めずにスキップされることを確認する。
             検証観点:
                 - 不正URLのitemは結果に含まれない。
-                - 妥当なitemはHttpRequestとして生成される。
+                - 妥当なitemはHttpRequestTaskとして生成される。
         """
 
         rss_xml = """
@@ -319,7 +319,7 @@ class TestMod:
         assert log_lines, "ログが1行以上出力されること"
         payload = json.loads(log_lines[-1])
         record = payload["record"]
-        assert record["message"] == "invalid http request item skipped"
+        assert record["message"] == "invalid http request task item skipped"
         extra = record["extra"]
         assert extra["rss_group"] == "mock:logging"
         assert extra["request_url"] == "notaurl"

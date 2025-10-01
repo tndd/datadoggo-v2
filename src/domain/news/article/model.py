@@ -36,7 +36,7 @@ class TestMod:
             目的: Article がHTML本体を保持できることを確認する。
             検証観点:
                 - HTML文字列が格納される。
-                - HttpRequest由来の属性が保持される。
+                - HttpRequestTask由来の属性が保持される。
                 - description と group が nullable であることを確認する。
         """
 

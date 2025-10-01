@@ -1,4 +1,4 @@
-"""HttpRequestテーブルからの読み出し処理(CQRSのクエリ側)"""
+"""HttpRequestTaskをhttp_request_queueテーブルから読み出す処理(CQRSのクエリ側)"""
 
 from __future__ import annotations
 
@@ -10,12 +10,12 @@ from sqlmodel import select
 
 from infra.storage.rds import session_scope
 
-from .model import HttpRequest, HttpRequestRecord
+from .model import HttpRequestTask, HttpRequestTaskRecord
 from .service import record_to_http_request
 
 
 class HttpRequestQuery(BaseModel):
-    """HttpRequest検索時の条件入力モデル"""
+    """HttpRequestTask検索時の条件入力モデル"""
 
     limit: int = Field(default=100, ge=1, le=500)
     offset: int = Field(default=0, ge=0)
@@ -27,11 +27,13 @@ class HttpRequestQuery(BaseModel):
     created_at_to: datetime | None = None
 
 
-def find_http_request_by_id(request_id: str) -> HttpRequest | None:
-    """IDでHttpRequestを検索し、存在すれば返す"""
+def find_http_request_by_id(request_id: str) -> HttpRequestTask | None:
+    """IDでHttpRequestTaskを検索し、存在すれば返す"""
 
     with session_scope() as session:
-        statement = select(HttpRequestRecord).where(HttpRequestRecord.id == request_id)
+        statement = select(HttpRequestTaskRecord).where(
+            HttpRequestTaskRecord.id == request_id
+        )
         record = session.exec(statement).first()
         if record is None:
             return None
@@ -39,42 +41,42 @@ def find_http_request_by_id(request_id: str) -> HttpRequest | None:
         return record_to_http_request(record)
 
 
-def search_http_requests(query: HttpRequestQuery) -> list[HttpRequest]:
-    """HttpRequestをページングして取得する"""
+def search_http_requests(query: HttpRequestQuery) -> list[HttpRequestTask]:
+    """HttpRequestTaskをページングして取得する"""
 
     with session_scope() as session:
-        statement = select(HttpRequestRecord)
+        statement = select(HttpRequestTaskRecord)
 
         if query.description:
             statement = statement.where(
-                HttpRequestRecord.description.contains(query.description)  # type: ignore[attr-defined]
+                HttpRequestTaskRecord.description.contains(query.description)  # type: ignore[attr-defined]
             )
 
         if query.url:
-            statement = statement.where(HttpRequestRecord.url == query.url)
+            statement = statement.where(HttpRequestTaskRecord.url == query.url)
 
         if query.group:
             statement = statement.where(
-                HttpRequestRecord.group.contains(query.group)  # type: ignore[attr-defined]
+                HttpRequestTaskRecord.group.contains(query.group)  # type: ignore[attr-defined]
             )
 
         if query.status_code is not None:
             statement = statement.where(
-                HttpRequestRecord.status_code == query.status_code
+                HttpRequestTaskRecord.status_code == query.status_code
             )
 
         if query.created_at_from is not None:
             statement = statement.where(
-                HttpRequestRecord.created_at >= query.created_at_from
+                HttpRequestTaskRecord.created_at >= query.created_at_from
             )
 
         if query.created_at_to is not None:
             statement = statement.where(
-                HttpRequestRecord.created_at <= query.created_at_to
+                HttpRequestTaskRecord.created_at <= query.created_at_to
             )
 
         statement = (
-            statement.order_by(desc(HttpRequestRecord.created_at))  # type: ignore[arg-type]
+            statement.order_by(desc(HttpRequestTaskRecord.created_at))  # type: ignore[arg-type]
             .offset(query.offset)
             .limit(query.limit)
         )
@@ -89,8 +91,8 @@ class TestMod:
             目的:
                 find_http_request_by_id が既存レコードを取得できることを確認する。
             検証観点:
-                - store_http_request で保存したIDを指定すると HttpRequest が返る。
-                - 取得した HttpRequest の属性が保存時と一致する。
+                - store_http_request で保存したIDを指定すると HttpRequestTask が返る。
+                - 取得した HttpRequestTask の属性が保存時と一致する。
                 - created_at / updated_at が取得結果でも保持される。
         """
 

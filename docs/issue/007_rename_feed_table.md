@@ -6,8 +6,8 @@
 
 ## http_request_queue
 テーブル名: `http_request_queue`
-ドメインモデル名: `HttpRequest`
-レコードモデル名: `HttpRequestRecord`
+ドメインモデル名: `HttpRequestTask`
+レコードモデル名: `HttpRequestTaskRecord`
 
 | name        | type     | nullable | description                                                       |
 | ----------- | -------- | -------- | ----------------------------------------------------------------- |
@@ -35,9 +35,9 @@
 
 ### モデル・サービス層 (完了)
 - [src/domain/task_queue/http_request/model.py](../../../src/domain/task_queue/http_request/model.py)
-  - `FeedItem` → `HttpRequest` にリネーム
-  - `FeedRecord` → `HttpRequestRecord` にリネーム
-  - `__tablename__ = "feed_item"` → `"http_request"` に変更
+  - `FeedItem` → `HttpRequestTask` にリネーム
+  - `FeedRecord` → `HttpRequestTaskRecord` にリネーム
+  - `__tablename__ = "feed_item"` → `"http_request_queue"` に変更
   - `title: str` → `description: str | None` に変更
   - `pub_date: datetime` → 削除 (created_atで代替)
   - `group: str` フィールドを追加
@@ -56,7 +56,7 @@
 
 - [src/domain/task_queue/http_request/command.py](../../../src/domain/task_queue/http_request/command.py)
   - `store_feed()` → `store_http_request()` にリネーム
-  - 引数: `FeedItem` → `HttpRequest` に変更
+  - 引数: `FeedItem` → `HttpRequestTask` に変更
   - 全テストを更新
 
 - [src/domain/task_queue/http_request/search.py](../../../src/domain/task_queue/http_request/search.py)
@@ -70,14 +70,14 @@
 
 ### Article関連 (完了)
 - [src/domain/news/article/search.py](../../../src/domain/news/article/search.py)
-  - `FeedRecord` → `HttpRequestRecord` に変更
+  - `FeedRecord` → `HttpRequestTaskRecord` に変更
   - フィールド参照: `.title` → `.description` に変更
   - フィールド参照: `.pub_date` → `.created_at` に変更
   - `find_article_by_id()`, `search_articles_by_ids()` の動作確認
   - 全テストを更新
 
 - [src/domain/news/article/fetch.py](../../../src/domain/news/article/fetch.py)
-  - `FeedItem` → `HttpRequest` に変更
+  - `FeedItem` → `HttpRequestTask` に変更
   - フィールド参照: `.title` → `.description` に変更
   - フィールド参照: `.pub_date` → `.created_at` に変更
 
@@ -94,7 +94,7 @@
   - 関数名の変更
 
 ## データベース移行
-- 既存の`feed_item`テーブルを削除し、新しい`http_request`テーブルを作成
+- 既存の`feed_item`テーブルを削除し、新しい`http_request_queue`テーブルを作成
 - 開発段階のため、マイグレーションスクリプトは不要
 - `data/datadoggo.db`を削除して`initialize_database()`で再生成
 
@@ -104,9 +104,9 @@
 
 ## Phase 1: モデル層の変更 (task_queue/http_request/model.py) ✅
 **実装内容**:
-- `FeedItem` → `HttpRequest` にリネーム
-- `FeedRecord` → `HttpRequestRecord` にリネーム
-- `__tablename__` を `"http_request"` に変更
+- `FeedItem` → `HttpRequestTask` にリネーム
+- `FeedRecord` → `HttpRequestTaskRecord` にリネーム
+- `__tablename__` を `"http_request_queue"` に変更
 - フィールド変更:
   - `title: str` → `description: str | None`
   - `pub_date: datetime` 削除
@@ -140,7 +140,7 @@
 ## Phase 3: コマンド層の変更 (task_queue/http_request/command.py) ✅
 **実装内容**:
 - `store_feed()` → `store_http_request()` にリネーム
-- 引数: `FeedItem` → `HttpRequest`
+- 引数: `FeedItem` → `HttpRequestTask`
 - インポート修正
 - テスト修正 (同ファイル内の `TestMod` 1テスト)
 
@@ -164,7 +164,7 @@
 
 ## Phase 5: Article検索層の修正 (article/search.py) ✅
 **実装内容**:
-- インポート: `FeedRecord` → `HttpRequestRecord`
+- インポート: `FeedRecord` → `HttpRequestTaskRecord`
 - インポートパス: `src.domain.news.feed` → `src.domain.task_queue.http_request`
 - フィールド参照:
   - `.title` → `.description` (38, 88行目)
@@ -177,7 +177,7 @@
 
 ## Phase 6: Article取得層の修正 (article/fetch.py) ✅
 **実装内容**:
-- インポート: `FeedItem` → `HttpRequest`
+- インポート: `FeedItem` → `HttpRequestTask`
 - インポートパス: `src.domain.news.feed` → `src.domain.task_queue.http_request`
 - フィールド参照:
   - `.title` → `.description` (45行目)

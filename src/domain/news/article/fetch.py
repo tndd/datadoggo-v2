@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
 from infra.logging import get_logger
-from src.domain.task_queue.http_request.model import HttpRequest
+from src.domain.task_queue.http_request.model import HttpRequestTask
 
 from .model import Article
 
@@ -12,9 +12,9 @@ _log = get_logger()
 
 
 def fetch_article_content(
-    request: HttpRequest, *, client: HttpsClient | None = None
+    request: HttpRequestTask, *, client: HttpsClient | None = None
 ) -> Article | None:
-    """HttpRequestを基に記事HTMLを取得しArticleを生成する"""
+    """HttpRequestTaskを基に記事HTMLを取得しArticleを生成する"""
 
     http_client = client or HttpsClient()
 
@@ -75,7 +75,7 @@ class TestMod:
             目的: ステータス200の場合にArticleが生成されることを確認する。
             検証観点:
                 - HTML本文がデコードされる。
-                - HttpRequestの属性が引き継がれる。
+                - HttpRequestTaskの属性が引き継がれる。
                 - description が nullable であることを確認する。
         """
 
@@ -105,7 +105,7 @@ class TestMod:
 
         client = HttpsClient(fetcher=mock_fetcher)
 
-        request = HttpRequest(
+        request = HttpRequestTask(
             id="abc",
             url=cast(HttpUrl, "https://example.com/detail"),
             description="テスト",
@@ -123,7 +123,7 @@ class TestMod:
         assert article.description == "テスト"
 
         # description が None のケース
-        request_no_desc = HttpRequest(
+        request_no_desc = HttpRequestTask(
             id="xyz",
             url=cast(HttpUrl, "https://example.com/no-title"),
             description=None,
@@ -169,7 +169,7 @@ class TestMod:
 
         client = HttpsClient(fetcher=mock_fetcher)
 
-        request = HttpRequest(
+        request = HttpRequestTask(
             id="abc",
             url=cast(HttpUrl, "https://example.com/detail"),
             description="テスト",
