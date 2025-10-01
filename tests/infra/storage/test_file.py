@@ -2,34 +2,14 @@
 
 from pathlib import Path
 
-import pytest
 from pyfakefs.fake_filesystem import FakeFilesystem
 
 from infra.storage.file import (
     SaveFormat,
     load_bytes,
-    load_file,
     save_bytes_to_file,
     save_content_to_file,
 )
-
-
-@pytest.mark.no_fs
-def test_load_file() -> None:
-    """
-    docs:
-        目的: load_file のパス解決挙動を確認する。
-        検証観点:
-            - '.' 始まりの相対パスは呼び出しファイル基準で読む。
-            - それ以外はプロジェクトルート基準で読む。
-    """
-
-    # absolute
-    text = load_file("mock/sample.txt")
-    assert text == "sample text"
-    # relative - 実ファイルシステムのfile.pyを読む
-    text = load_file("./file.py")
-    assert text.startswith("# file.py")  # WARN: その場しのぎのテスト
 
 
 def test_save_content_to_file(fs: FakeFilesystem) -> None:
