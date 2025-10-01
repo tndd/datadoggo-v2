@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, cast
 
 from pydantic import BaseModel, Field
 from sqlalchemy import desc
@@ -47,15 +46,17 @@ def search_http_requests(query: HttpRequestQuery) -> list[HttpRequest]:
         statement = select(HttpRequestRecord)
 
         if query.description:
-            description_expr = cast(Any, HttpRequestRecord.description)
-            statement = statement.where(description_expr.contains(query.description))
+            statement = statement.where(
+                HttpRequestRecord.description.contains(query.description)  # type: ignore[attr-defined]
+            )
 
         if query.url:
             statement = statement.where(HttpRequestRecord.url == query.url)
 
         if query.group:
-            group_expr = cast(Any, HttpRequestRecord.group)
-            statement = statement.where(group_expr.contains(query.group))
+            statement = statement.where(
+                HttpRequestRecord.group.contains(query.group)  # type: ignore[attr-defined]
+            )
 
         if query.status_code is not None:
             statement = statement.where(
@@ -73,7 +74,7 @@ def search_http_requests(query: HttpRequestQuery) -> list[HttpRequest]:
             )
 
         statement = (
-            statement.order_by(desc(cast(Any, HttpRequestRecord.created_at)))
+            statement.order_by(desc(HttpRequestRecord.created_at))  # type: ignore[arg-type]
             .offset(query.offset)
             .limit(query.limit)
         )
