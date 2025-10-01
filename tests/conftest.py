@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from pyfakefs.fake_filesystem import FakeFilesystem
 
-from src.infra.logging import configure_logging, reset_logging
+from infra.logging import configure_logging, reset_logging
 
 
 @pytest.fixture
@@ -23,12 +23,12 @@ def app_logging(fs: FakeFilesystem):
 @pytest.fixture(autouse=True)
 def initialize_test_db():
     """各テスト実行前に自動的にDBを初期化"""
-    import src.infra.storage.rds
-    from src.infra.storage.rds import initialize_database
+    import infra.storage.rds
+    from infra.storage.rds import initialize_database
 
     # テスト開始前にエンジンキャッシュをクリア
-    if hasattr(src.infra.storage.rds, "_test_engine"):
-        src.infra.storage.rds._test_engine = None
+    if hasattr(infra.storage.rds, "_test_engine"):
+        infra.storage.rds._test_engine = None
 
     # DBを初期化（新しいエンジンでテーブル作成）
     initialize_database()
