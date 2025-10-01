@@ -19,7 +19,7 @@ from infra.parse import parse_rss
 
 from .model import HttpRequestTask, HttpRequestTaskRecord
 
-DEFAULT_FEED_STATUS_CODE = None
+DEFAULT_HTTP_REQUEST_STATUS_CODE = None
 _log = get_logger()
 
 
@@ -80,7 +80,7 @@ def convert_rss_items_to_http_requests(
     root: Element,
     *,
     group: str | None,
-    default_status_code: int | None = DEFAULT_FEED_STATUS_CODE,
+    default_status_code: int | None = DEFAULT_HTTP_REQUEST_STATUS_CODE,
 ) -> list[HttpRequestTask]:
     """RSSのitem要素をHttpRequestTaskリストに変換する"""
 
@@ -210,7 +210,7 @@ class TestMod:
         assert str(first.url).startswith("https://news.google.com/rss/articles/")
         expected_datetime = datetime(2025, 9, 24, 11, 52, 38, tzinfo=timezone.utc)
         assert first.created_at == expected_datetime
-        assert first.status_code is DEFAULT_FEED_STATUS_CODE
+        assert first.status_code is DEFAULT_HTTP_REQUEST_STATUS_CODE
         assert first.group == "mock:google"
         assert first.updated_at.tzinfo is not None
 
@@ -245,7 +245,7 @@ class TestMod:
 
         assert len(items) == 1
         assert str(items[0].url) == "https://example.com/valid"
-        assert items[0].status_code is DEFAULT_FEED_STATUS_CODE
+        assert items[0].status_code is DEFAULT_HTTP_REQUEST_STATUS_CODE
 
     def test_convert_rss_items_to_http_requests_skips_invalid_http_url(self) -> None:
         """

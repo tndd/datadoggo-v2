@@ -14,17 +14,23 @@ _log = get_logger()
 def fetch_article_content(
     request: HttpRequestTask, *, client: HttpsClient | None = None
 ) -> Article | None:
-    """HttpRequestTaskを基に記事HTMLを取得しArticleを生成する"""
+    """HttpRequestTaskを基に記事HTMLを取得しArticleを生成する
+
+    タイムスタンプの挙動:
+        - created_at: HttpRequestTaskのcreated_atを保持（記事の公開日時を表す）
+        - updated_at: 現在時刻を設定（記事HTMLの取得日時を表す）
+    """
 
     http_client = client or HttpsClient()
 
     try:
         response = http_client.get(str(request.url))
-    except RuntimeError:  # pragma: no cover - ネットワーク例外のログ確認
+    except Exception as error:  # pragma: no cover - ネットワーク例外のログ確認
         _log.exception(
-            "記事HTML取得中にネットワークエラーが発生しました",
+            "記事HTML取得中に例外が発生しました",
             http_request_id=request.id,
             url=str(request.url),
+            error_type=type(error).__name__,
         )
         return None
 
@@ -46,8 +52,8 @@ def fetch_article_content(
         url=request.url,
         content=html,
         group=request.group,
-        created_at=request.created_at,  # 元のpublished_atを保持
-        updated_at=now,  # 更新日時のみ現在時刻
+        created_at=request.created_at,  # 記事の公開日時を保持
+        updated_at=now,  # HTML取得日時として現在時刻を設定
         description=request.description,
     )
     _log.info(

@@ -18,7 +18,7 @@ def save_article_content(article: Article) -> str:
         object_key=article.id,
     )
     if not saved_key:
-        msg = f"記事HTMLの保存に失敗しました: http_request_id={article.id}"
+        msg = f"記事HTMLの保存に失敗しました: article_id={article.id}"
         raise RuntimeError(msg)
 
     return saved_key
