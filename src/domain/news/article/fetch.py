@@ -20,11 +20,12 @@ def fetch_article_content(
 
     try:
         response = http_client.get(str(request.url))
-    except RuntimeError:  # pragma: no cover - ネットワーク例外のログ確認
+    except Exception as error:  # pragma: no cover - ネットワーク例外のログ確認
         _log.exception(
-            "記事HTML取得中にネットワークエラーが発生しました",
+            "記事HTML取得中に例外が発生しました",
             http_request_id=request.id,
             url=str(request.url),
+            error_type=type(error).__name__,
         )
         return None
 

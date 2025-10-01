@@ -49,6 +49,7 @@ def search_http_requests(query: HttpRequestQuery) -> list[HttpRequestTask]:
 
         if query.description:
             statement = statement.where(
+                # SQLModelの動的属性(contains)は型チェッカーで認識されないため型無視
                 HttpRequestTaskRecord.description.contains(query.description)  # type: ignore[attr-defined]
             )
 
@@ -57,6 +58,7 @@ def search_http_requests(query: HttpRequestQuery) -> list[HttpRequestTask]:
 
         if query.group:
             statement = statement.where(
+                # SQLModelの動的属性(contains)は型チェッカーで認識されないため型無視
                 HttpRequestTaskRecord.group.contains(query.group)  # type: ignore[attr-defined]
             )
 
@@ -76,6 +78,7 @@ def search_http_requests(query: HttpRequestQuery) -> list[HttpRequestTask]:
             )
 
         statement = (
+            # SQLModelカラムのdesc()呼び出しは型チェッカーで認識されないため型無視
             statement.order_by(desc(HttpRequestTaskRecord.created_at))  # type: ignore[arg-type]
             .offset(query.offset)
             .limit(query.limit)
