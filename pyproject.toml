@@ -32,8 +32,8 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["src"]
-python_files = ["*.py"]
+testpaths = ["src", "tests"]
+python_files = ["*.py", "test_*.py"]
 addopts = "--import-mode=importlib -m 'not online'"
 markers = [
     "online: marks tests as requiring internet connection (deselect with '-m \"not online\"')"
