@@ -2,37 +2,51 @@
 
 from __future__ import annotations
 
-from xml.etree.ElementTree import Element
-
+from domain.task_queue.http_request.model import HttpRequestTask
 from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
 
 from .fetch import fetch_rss_from_links
 from .search import RssItemQuery, load_rss_links
+from .service import convert_rss_element_to_http_requests
 
 
-def fetch_rss_elements_from_query(
+def fetch_http_requests_from_query(
     query: RssItemQuery,
     *,
     client: HttpsClient | None = None,
     parallel: bool | int = False,
-) -> list[Element]:
-    """RssItemQuery に一致するリンクを取得し RSS のルート要素を返す"""
+) -> list[HttpRequestTask]:
+    """RssItemQuery に一致するリンクを取得し HttpRequestTask リストを返す"""
 
     rss_items = load_rss_links(query)
-    return fetch_rss_from_links(rss_items, client=client, parallel=parallel)
+    elements = fetch_rss_from_links(rss_items, client=client, parallel=parallel)
+
+    # 各ElementをHttpRequestTaskリストに変換して結合
+    http_requests: list[HttpRequestTask] = []
+    for i, element in enumerate(elements):
+        # RssItemからgroupを取得（group:nameの形式）
+        rss_item = rss_items[i]
+        group = f"{rss_item.group}:{rss_item.name}"
+        http_requests.extend(
+            convert_rss_element_to_http_requests(element, group=group)
+        )
+
+    return http_requests
 
 
 class TestMod:
     """このモジュールのテストコレクション"""
 
-    def test_fetch_rss_elements_from_query_returns_elements(self, tmp_path) -> None:
+    def test_fetch_http_requests_from_query_returns_http_requests(
+        self, tmp_path
+    ) -> None:
         """
         docs:
             目的:
-                RssItemQuery で指定したリンクの RSS 要素が取得できることを確認する。
+                RssItemQuery で指定したリンクの HttpRequestTask が取得できることを確認する。
             検証観点:
                 - group 指定で絞り込まれたリンクのみが通信される。
-                - 返却された Element からタイトルが読み取れる。
+                - 返却された HttpRequestTask からdescription, url, groupが読み取れる。
         """
 
         yaml_path = tmp_path / "links.yml"
@@ -51,10 +65,22 @@ class TestMod:
 
         rss_payloads = {
             "https://example.com/rss": (
-                b"<rss version='2.0'><channel><title>Headline</title></channel></rss>"
+                b"<rss version='2.0'><channel>"
+                b"<item>"
+                b"<title>Headline Article</title>"
+                b"<link>https://example.com/article1</link>"
+                b"<pubDate>Tue, 01 Oct 2025 12:00:00 GMT</pubDate>"
+                b"</item>"
+                b"</channel></rss>"
             ),
             "https://example.com/rss-2": (
-                b"<rss version='2.0'><channel><title>Latest</title></channel></rss>"
+                b"<rss version='2.0'><channel>"
+                b"<item>"
+                b"<title>Latest Article</title>"
+                b"<link>https://example.com/article2</link>"
+                b"<pubDate>Tue, 01 Oct 2025 13:00:00 GMT</pubDate>"
+                b"</item>"
+                b"</channel></rss>"
             ),
         }
         fetched_urls: list[str] = []
@@ -79,18 +105,19 @@ class TestMod:
 
         client = HttpsClient(fetcher=mock_fetcher)
 
-        elements = fetch_rss_elements_from_query(
+        http_requests = fetch_http_requests_from_query(
             RssItemQuery(group="sample", path=str(yaml_path)),
             client=client,
         )
 
         assert set(fetched_urls) == set(rss_payloads)
-        assert {element.findtext("channel/title") for element in elements} == {
-            "Headline",
-            "Latest",
-        }
+        assert len(http_requests) == 2
+        descriptions = {req.description for req in http_requests}
+        assert descriptions == {"Headline Article", "Latest Article"}
+        groups = {req.group for req in http_requests}
+        assert groups == {"sample:headline", "sample:latest"}
 
-    def test_fetch_rss_elements_from_query_returns_empty_when_not_matched(
+    def test_fetch_http_requests_from_query_returns_empty_when_not_matched(
         self, tmp_path
     ) -> None:
         """
@@ -120,9 +147,9 @@ class TestMod:
 
         client = HttpsClient(fetcher=error_fetcher)
 
-        elements = fetch_rss_elements_from_query(
+        http_requests = fetch_http_requests_from_query(
             RssItemQuery(group="missing", path=str(yaml_path)),
             client=client,
         )
 
-        assert elements == []
+        assert http_requests == []
