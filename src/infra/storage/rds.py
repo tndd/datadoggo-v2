@@ -1,6 +1,5 @@
 """RDS(SQLite)接続まわりのユーティリティ関数群"""
 
-import sys
 from collections.abc import Callable
 from contextlib import contextmanager
 from pathlib import Path
@@ -88,5 +87,3 @@ def _ensure_sqlite_directory(database_url: str) -> None:
         db_path = Path.cwd() / db_path
 
     db_path.parent.mkdir(parents=True, exist_ok=True)
-
-

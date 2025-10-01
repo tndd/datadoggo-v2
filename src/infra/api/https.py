@@ -256,5 +256,3 @@ class RecordingFetcher:
             body=body,
             encoding=self.encoding,
         )
-
-

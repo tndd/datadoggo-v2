@@ -6,14 +6,13 @@ import pytest
 from pydantic import HttpUrl, ValidationError
 
 from domain.task_queue.http_request.model import (
-    HttpRequestTask,
     SUCCESS_STATUS_CODE,
+    HttpRequestTask,
     validate_group_format,
 )
 
-
-
 """このモジュールのテストコレクション"""
+
 
 def test_validate_group_format_accepts_valid_format() -> None:
     """
@@ -25,9 +24,11 @@ def test_validate_group_format_accepts_valid_format() -> None:
         - None を受け入れる。
     """
 
+
 assert validate_group_format("bbc:world") == "bbc:world"
 assert validate_group_format("test:success") == "test:success"
 assert validate_group_format(None) is None
+
 
 def test_validate_group_format_rejects_invalid_format() -> None:
     """
@@ -40,7 +41,6 @@ def test_validate_group_format_rejects_invalid_format() -> None:
         - コロンが2つ以上ある形式を拒否する。
     """
 
-import pytest
 
 with pytest.raises(ValueError, match="source.*category"):
     validate_group_format("invalid")
@@ -57,6 +57,7 @@ with pytest.raises(ValueError, match="source.*category"):
 with pytest.raises(ValueError, match="source.*category"):
     validate_group_format("a:b:c")
 
+
 def test_validate_group_format_rejects_whitespace_edge_cases() -> None:
     """
     docs:
@@ -67,9 +68,9 @@ def test_validate_group_format_rejects_whitespace_edge_cases() -> None:
         - 空白のみの要素を拒否する。
     """
 
-import pytest
+    # 前後に空白を含む場合は拒否
 
-# 前後に空白を含む場合は拒否
+
 with pytest.raises(ValueError, match="source.*category"):
     validate_group_format(" bbc:world")
 
@@ -86,6 +87,7 @@ with pytest.raises(ValueError, match="source.*category"):
 with pytest.raises(ValueError, match="source.*category"):
     validate_group_format("bbc: ")
 
+
 def test_is_success_and_backlog() -> None:
     """
     docs:
@@ -99,48 +101,44 @@ def test_is_success_and_backlog() -> None:
         - group が nullable であることを確認する。
     """
 
-from datetime import datetime, timezone
+    base_time = datetime(2025, 9, 29, 0, 0, tzinfo=timezone.utc)
+    url_value = HttpUrl("https://example.com/rss")
 
-from pydantic import HttpUrl
+    # status_code=200 の場合
+    success = HttpRequestTask(
+        id="abc",
+        url=url_value,
+        description="example",
+        group="test:source",
+        status_code=SUCCESS_STATUS_CODE,
+        created_at=base_time,
+        updated_at=base_time,
+    )
+    assert success.is_success()
+    assert not success.is_backlog()
 
-base_time = datetime(2025, 9, 29, 0, 0, tzinfo=timezone.utc)
+    # status_code=None の場合
+    backlog_none = success.model_copy(update={"status_code": None})
+    assert backlog_none.is_backlog()
+    assert not backlog_none.is_success()
 
-url_value = HttpUrl("https://example.com/rss")
+    # status_code=404 の場合
+    backlog_error = success.model_copy(update={"status_code": 404})
+    assert backlog_error.is_backlog()
+    assert not backlog_error.is_success()
 
-# status_code=200 の場合
-success = HttpRequestTask(
-    id="abc",
-    url=url_value,
-    description="example",
-    group="test:source",
-    status_code=SUCCESS_STATUS_CODE,
-    created_at=base_time,
-    updated_at=base_time,
-)
-assert success.is_success()
-assert not success.is_backlog()
+    # group が None でも生成可能
+    no_group = HttpRequestTask(
+        id="xyz",
+        url=url_value,
+        description="no group",
+        group=None,
+        status_code=SUCCESS_STATUS_CODE,
+        created_at=base_time,
+        updated_at=base_time,
+    )
+    assert no_group.group is None
 
-# status_code=None の場合
-backlog_none = success.model_copy(update={"status_code": None})
-assert backlog_none.is_backlog()
-assert not backlog_none.is_success()
-
-# status_code=404 の場合
-backlog_error = success.model_copy(update={"status_code": 404})
-assert backlog_error.is_backlog()
-assert not backlog_error.is_success()
-
-# group が None でも生成可能
-no_group = HttpRequestTask(
-    id="xyz",
-    url=url_value,
-    description="no group",
-    group=None,
-    status_code=SUCCESS_STATUS_CODE,
-    created_at=base_time,
-    updated_at=base_time,
-)
-assert no_group.group is None
 
 def test_http_request_task_raises_on_invalid_group() -> None:
     """
@@ -153,57 +151,53 @@ def test_http_request_task_raises_on_invalid_group() -> None:
         - エラーメッセージに例が含まれる。
     """
 
-from datetime import datetime, timezone
+    base_time = datetime(2025, 9, 29, 0, 0, tzinfo=timezone.utc)
+    url_value = HttpUrl("https://example.com/rss")
 
-from pydantic import HttpUrl, ValidationError
+    # コロンなしの不正な形式
+    try:
+        HttpRequestTask(
+            id="invalid1",
+            url=url_value,
+            description="invalid",
+            group="invalid_format",
+            status_code=SUCCESS_STATUS_CODE,
+            created_at=base_time,
+            updated_at=base_time,
+        )
+        raise AssertionError("ValidationErrorが発生しませんでした")
+    except ValidationError as error:
+        error_msg = str(error)
+        assert "source" in error_msg
+        assert "category" in error_msg
+        assert "bbc:world" in error_msg  # 例が含まれることを確認
 
-base_time = datetime(2025, 9, 29, 0, 0, tzinfo=timezone.utc)
-url_value = HttpUrl("https://example.com/rss")
+    # 空の要素を含む形式
+    try:
+        HttpRequestTask(
+            id="invalid2",
+            url=url_value,
+            description="invalid",
+            group="test:",
+            status_code=SUCCESS_STATUS_CODE,
+            created_at=base_time,
+            updated_at=base_time,
+        )
+        raise AssertionError("ValidationErrorが発生しませんでした")
+    except ValidationError:
+        pass  # 期待通り
 
-# コロンなしの不正な形式
-try:
-    HttpRequestTask(
-        id="invalid1",
-        url=url_value,
-        description="invalid",
-        group="invalid_format",
-        status_code=SUCCESS_STATUS_CODE,
-        created_at=base_time,
-        updated_at=base_time,
-    )
-    raise AssertionError("ValidationErrorが発生しませんでした")
-except ValidationError as error:
-    error_msg = str(error)
-    assert "source" in error_msg
-    assert "category" in error_msg
-    assert "bbc:world" in error_msg  # 例が含まれることを確認
-
-# 空の要素を含む形式
-try:
-    HttpRequestTask(
-        id="invalid2",
-        url=url_value,
-        description="invalid",
-        group="test:",
-        status_code=SUCCESS_STATUS_CODE,
-        created_at=base_time,
-        updated_at=base_time,
-    )
-    raise AssertionError("ValidationErrorが発生しませんでした")
-except ValidationError:
-    pass  # 期待通り
-
-# 前後に空白を含む形式
-try:
-    HttpRequestTask(
-        id="invalid3",
-        url=url_value,
-        description="invalid",
-        group=" test:category ",
-        status_code=SUCCESS_STATUS_CODE,
-        created_at=base_time,
-        updated_at=base_time,
-    )
-    raise AssertionError("ValidationErrorが発生しませんでした")
-except ValidationError:
-    pass  # 期待通り
+    # 前後に空白を含む形式
+    try:
+        HttpRequestTask(
+            id="invalid3",
+            url=url_value,
+            description="invalid",
+            group=" test:category ",
+            status_code=SUCCESS_STATUS_CODE,
+            created_at=base_time,
+            updated_at=base_time,
+        )
+        raise AssertionError("ValidationErrorが発生しませんでした")
+    except ValidationError:
+        pass  # 期待通り

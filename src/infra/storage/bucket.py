@@ -233,5 +233,3 @@ def load_objects(
             results_dict[key] = content
 
     return results_dict
-
-

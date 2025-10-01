@@ -1,8 +1,6 @@
 """domain.news.article.command のテスト"""
 
-import os
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import cast
 
 from pydantic import HttpUrl

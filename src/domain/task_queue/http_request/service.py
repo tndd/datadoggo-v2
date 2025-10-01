@@ -2,20 +2,15 @@
 
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
-from pathlib import Path
-from xml.etree import ElementTree as ET
 from xml.etree.ElementTree import Element
 
-import pytest
 from pydantic import ValidationError
 
 from domain.common import ensure_http_url, ensure_saved_at
 from infra.compute import hash_text_sha256
 from infra.logging import get_logger
-from infra.parse import parse_rss
 
 from .model import HttpRequestTask, HttpRequestTaskRecord
 

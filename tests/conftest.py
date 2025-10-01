@@ -29,10 +29,9 @@ def real_project_root() -> Path:
 @pytest.fixture(scope="session")
 def test_db_engine():
     """テスト用インメモリDBエンジンを提供（セッションスコープ）"""
-    from infra.storage.rds import create_sqlite_engine, initialize_database
-
     # テーブル定義をインポート（テーブル作成に必要）
     import domain.task_queue.http_request.model  # noqa: F401
+    from infra.storage.rds import create_sqlite_engine, initialize_database
 
     # インメモリDBエンジンを作成してテーブル初期化
     engine = create_sqlite_engine(url="sqlite:///:memory:")
@@ -43,10 +42,12 @@ def test_db_engine():
 @pytest.fixture(autouse=True)
 def setup_test_db(test_db_engine, monkeypatch):
     """テスト用DBをグローバルに設定"""
-    import infra.storage.rds
     from contextlib import contextmanager
     from typing import Iterator
+
     from sqlmodel import Session, SQLModel
+
+    import infra.storage.rds
 
     # 各テスト前にテーブルをクリーンアップ
     SQLModel.metadata.drop_all(test_db_engine)
@@ -83,21 +84,12 @@ def project_root(fs: FakeFilesystem) -> Path:
 
 
 @pytest.fixture(autouse=True)
-def setup_common_dirs(request, fs: FakeFilesystem, real_project_root: Path):
+def setup_common_dirs(fs: FakeFilesystem, real_project_root: Path):
     """テストで頻繁に使用されるディレクトリを事前作成"""
-    # fs fixtureを使わないテストはスキップ
-    if "no_fs" in request.keywords:
-        return
-
     common_dirs = ["/tmp", "/data", str(real_project_root)]
     for dir_path in common_dirs:
         if not fs.exists(dir_path):
             fs.create_dir(dir_path)
-
-    # src/infra/storage/file.pyをマップ（_find_project_root検索用）
-    file_py = real_project_root / "src" / "infra" / "storage" / "file.py"
-    if file_py.exists():
-        fs.add_real_file(file_py, read_only=True)
 
     # pyproject.tomlをマップしてプロジェクトルート検索を可能にする
     pyproject_file = real_project_root / "pyproject.toml"
@@ -111,4 +103,5 @@ def setup_common_dirs(request, fs: FakeFilesystem, real_project_root: Path):
 
     # デフォルトの作業ディレクトリをプロジェクトルートに設定
     import os
+
     os.chdir(str(real_project_root))

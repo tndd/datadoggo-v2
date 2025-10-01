@@ -3,7 +3,6 @@
 from datetime import datetime
 
 from domain.task_queue.http_request.command import store_http_request
-from domain.task_queue.http_request.model import HttpRequestTaskRecord
 from domain.task_queue.http_request.search import (
     HttpRequestQuery,
     find_http_request_by_id,
@@ -107,9 +106,7 @@ def test_search_http_requests_filters_and_order() -> None:
         request_other.id,
     }
 
-    status_filtered = search_http_requests(
-        HttpRequestQuery(status_code=500, limit=10)
-    )
+    status_filtered = search_http_requests(HttpRequestQuery(status_code=500, limit=10))
     assert [item.id for item in status_filtered] == [request_failure.id]
 
     range_filtered = search_http_requests(

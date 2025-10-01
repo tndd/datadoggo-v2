@@ -5,8 +5,8 @@ from __future__ import annotations
 from sqlmodel import Session, col, select
 
 from domain.common import ensure_http_url
-from infra.storage.bucket import load_object, load_objects
 from domain.task_queue.http_request.model import HttpRequestTaskRecord
+from infra.storage.bucket import load_object, load_objects
 
 from .model import Article
 

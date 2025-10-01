@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from xml.etree.ElementTree import Element
 
-from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
+from infra.api.https import HttpsClient
 
 from .fetch import fetch_rss_from_links
 from .search import RssItemQuery, load_rss_links

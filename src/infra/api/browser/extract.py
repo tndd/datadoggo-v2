@@ -55,5 +55,3 @@ def _parse_to_markdown(html: str) -> str:
     h.escape_snob = True  # Markdown特殊文字をエスケープ
 
     return h.handle(html).strip()
-
-

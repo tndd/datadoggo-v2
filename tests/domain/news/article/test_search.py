@@ -9,8 +9,8 @@ from pyfakefs.fake_filesystem import FakeFilesystem
 from domain.news.article.command import save_article_content
 from domain.news.article.model import Article
 from domain.news.article.search import find_article_by_id, search_articles_by_ids
-from infra.storage.rds import session_scope
 from domain.task_queue.http_request.model import HttpRequestTaskRecord
+from infra.storage.rds import session_scope
 
 
 def test_find_article_by_id_returns_article(fs: FakeFilesystem) -> None:

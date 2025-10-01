@@ -30,5 +30,3 @@ class Article(BaseModel):
     created_at: datetime  # 記事の公開日時(UTC)
     updated_at: datetime  # 記事HTMLの取得日時(UTC)
     description: str | None  # 説明。記事のタイトルや注釈など
-
-

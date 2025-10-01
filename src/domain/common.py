@@ -22,5 +22,3 @@ def ensure_saved_at(value: datetime | None = None) -> datetime:
     if target.tzinfo is None:
         return target.replace(tzinfo=timezone.utc)
     return target.astimezone(timezone.utc)
-
-

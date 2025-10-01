@@ -2,14 +2,12 @@
 
 from pathlib import Path
 
-import pytest
 from pyfakefs.fake_filesystem import FakeFilesystem
 
 from domain.news.rss_link.search import RssItemQuery, load_rss_links
 
-
-
 """このモジュールのテストコレクション"""
+
 
 def test_load_rss_links_reads_default_file() -> None:
     """
@@ -20,6 +18,7 @@ def test_load_rss_links_reads_default_file() -> None:
         - 代表的なリンク (bbc/top) が取得できる。
     """
 
+
 links = load_rss_links()
 assert links, "links.yml からリンクが取得できていません。"
 assert any(
@@ -28,6 +27,7 @@ assert any(
     and link.url.startswith("https://feeds.bbci.co.uk")
     for link in links
 ), "bbc/top のリンクが存在しません。"
+
 
 def test_load_rss_links_rejects_invalid_structure(fs: FakeFilesystem) -> None:
     """
@@ -45,6 +45,7 @@ def test_load_rss_links_rejects_invalid_structure(fs: FakeFilesystem) -> None:
         raise AssertionError("不正な構造で例外が発生しませんでした。")
     except ValueError:
         pass
+
 
 def test_load_rss_links_filters_by_query(fs: FakeFilesystem) -> None:
     """

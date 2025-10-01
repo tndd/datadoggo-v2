@@ -5,9 +5,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from xml.etree.ElementTree import Element
 
-import pytest
-
-from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
+from infra.api.https import HTTP_STATUS_OK, HttpsClient
 from infra.parse import parse_rss
 
 from .model import RssItem

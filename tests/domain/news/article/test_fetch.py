@@ -6,8 +6,8 @@ from typing import cast
 from pydantic import HttpUrl
 
 from domain.news.article.fetch import fetch_article_content
-from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
 from domain.task_queue.http_request.model import HttpRequestTask
+from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
 
 
 def test_fetch_article_content_returns_model_on_success() -> None:

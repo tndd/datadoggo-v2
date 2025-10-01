@@ -3,12 +3,9 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
 from typing import Union
 from xml.etree import ElementTree as ET
 from xml.etree.ElementTree import Element
-
-import pytest
 
 from infra.logging import get_logger
 
@@ -70,5 +67,3 @@ def _extract_local_name(tag: str) -> str:
     if "}" in tag:
         return tag.split("}", 1)[1]
     return tag
-
-

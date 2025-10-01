@@ -1,6 +1,6 @@
 """domain.common のテスト"""
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 from domain.common import ensure_http_url, ensure_saved_at
 

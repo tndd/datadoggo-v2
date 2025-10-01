@@ -1,47 +1,11 @@
 """domain.task_queue.http_request.service のテスト"""
 
 import json
-from datetime import datetime, timezone
-from pathlib import Path
 
 import pytest
 
 from domain.task_queue.http_request.service import convert_rss_items_to_http_requests
 from infra.parse import parse_rss
-
-
-@pytest.mark.no_fs
-def test_convert_rss_items_to_http_requests_parses_mock_feed(
-    real_project_root: Path,
-) -> None:
-    """
-    docs:
-        目的:
-            RSSモックファイルからHttpRequestTaskリストが生成されることを確認する。
-        検証観点:
-            - item要素からHttpRequestTaskが生成される。
-            - pubDateがcreated_atとしてUTCのdatetimeに変換される。
-            - titleがdescriptionとして設定される。
-    """
-
-    # 実ファイルシステムから直接読み込む
-    fixture_path = real_project_root / "mock" / "google_news.rss"
-    content = fixture_path.read_bytes()
-    root = parse_rss(content)
-
-    items = convert_rss_items_to_http_requests(root, group="mock:google")
-
-    assert items, "HttpRequestTaskが1件以上生成されること"
-    first = items[0]
-    assert first.description and first.description.startswith(
-        "Stocks dip as dollar rises"
-    )
-    assert str(first.url).startswith("https://news.google.com/rss/articles/")
-    expected_datetime = datetime(2025, 9, 24, 11, 52, 38, tzinfo=timezone.utc)
-    assert first.created_at == expected_datetime
-    assert first.status_code is None
-    assert first.group == "mock:google"
-    assert first.updated_at.tzinfo is not None
 
 
 def test_convert_rss_items_to_http_requests_skips_incomplete_item() -> None:

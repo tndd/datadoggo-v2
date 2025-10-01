@@ -6,7 +6,7 @@ sync:
 
 check:
 	uv run ruff format .
-	uv run ruff check .
+	uv run ruff check . --fix
 	uv run pyright
 
 test: check
