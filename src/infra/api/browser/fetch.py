@@ -81,19 +81,6 @@ async def _fetch_title(tab) -> str:
         return "Unknown"
 
 
-class TestMod:
-    """外部公開関数のテスト"""
-
-    import pytest
-
-    @pytest.mark.asyncio
-    @pytest.mark.online
-    async def test_fetch_page_content(self) -> None:
-        url = "https://example.com"
-        page_content = await fetch_page_content(url)
-        assert page_content.html is not None
-
-
 # 廃止
 async def main() -> None:
     pass

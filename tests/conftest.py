@@ -26,6 +26,9 @@ def initialize_test_db():
     import infra.storage.rds
     from infra.storage.rds import initialize_database
 
+    # テーブル定義をインポート（テーブル作成に必要）
+    import domain.task_queue.http_request.model  # noqa: F401
+
     # テスト開始前にエンジンキャッシュをクリア
     if hasattr(infra.storage.rds, "_test_engine"):
         infra.storage.rds._test_engine = None
