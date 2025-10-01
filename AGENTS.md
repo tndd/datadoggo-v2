@@ -41,7 +41,7 @@ Python は4スペースインデント、型ヒント必須、テキストコメ
 
 ## データベース更新時の注意
 - **テーブル名変更**: `feed_item` → `http_request_queue` に変更。
-- **モデル名変更**: `FeedItem` → `HttpRequestTask`, `FeedRecord` → `HttpRequestTaskRecord` に変更。
+- **モデル名変更**: `HttpRequestTask` → `HttpRequestTask`, `FeedRecord` → `HttpRequestTaskRecord` に変更。
 - **ディレクトリ構造変更**: `src/domain/news/feed/` → `src/domain/task_queue/http_request/` に移動。
   - HTTPリクエスト管理はニュース固有ではないため、汎用的なtask_queue配下に配置。
 - **フィールド変更**:

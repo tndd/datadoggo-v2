@@ -25,7 +25,7 @@
 ### RssItem
 links.yml に定義された RSS フィードのエントリ。
 - グループ名・リンク名・URL のみを保持するシンプルな構造。
-- 取得した RSS XML はバケットへ保存せず、そのまま Feed テーブルへ変換して保存する。
+- 取得した RSS XML はバケットへ保存せず、そのまま http_request_queueテーブルへ変換して保存する。
 
 | name  | type     | description |
 | ----- | -------- | ----------- |
@@ -35,17 +35,17 @@ links.yml に定義された RSS フィードのエントリ。
 
 ## article
 
-Article機能は記事のHTMLコンテンツをバケットに保存し、Feedテーブルのメタデータと組み合わせて完全なArticleを提供する。
+Article機能は記事のHTMLコンテンツをバケットに保存し、http_request_queueテーブルのメタデータと組み合わせて完全なArticleを提供する。
 
 **設計方針:**
-- ArticleBucketMetadataテーブルは廃止。メタデータは既存のFeedテーブルから取得。
+- ArticleBucketMetadataテーブルは廃止。メタデータは既存のhttp_request_queueテーブルから取得。
 - バケットには記事のHTMLコンテンツのみを保存。
-- 記事の取得状況はFeedテーブルの `status_code` で管理（200=成功、その他=失敗）。
+- 記事の取得状況はhttp_request_queueテーブルの `status_code` で管理（200=成功、その他=失敗）。
 
 **処理フロー:**
-1. `fetch_article_content`: FeedItemから記事HTMLを取得してArticleを生成
+1. `fetch_article_content`: HttpRequestTaskから記事HTMLを取得してArticleを生成
 2. `save_article_content`: ArticleのHTMLコンテンツをバケットに保存
-3. `find_article_by_id`: FeedテーブルとバケットからArticleを再構築
+3. `find_article_by_id`: http_request_queueテーブルとバケットからArticleを再構築
 
 # バケット
 ## article

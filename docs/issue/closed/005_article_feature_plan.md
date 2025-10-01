@@ -49,7 +49,7 @@ src/domain/news/article/
 
 ### `fetch.py`
 
-- **`fetch_article_content(feed: FeedItem) -> ArticleContent | None`**:
+- **`fetch_article_content(feed: HttpRequestTask) -> ArticleContent | None`**:
   - `infra.api.https`でHTMLを取得する。
   - 取得成功時、`feed`情報と生のHTMLで`ArticleContent`を生成して返す。
   - 取得失敗時はログを出力し`None`を返す。

@@ -15,13 +15,13 @@
 
 ### 3.1 スキーマ/モデル
 - `FeedRecord` から `bucket_id` カラムを削除し、`created_at` `updated_at` (いずれも timezone-aware `datetime`) を追加する。
-  - `FeedItem` ドメインモデルにも同名フィールドを追加し、`create_feed` が `ensure_saved_at` を利用して UTC で初期化する。
+  - `HttpRequestTask` ドメインモデルにも同名フィールドを追加し、`create_feed` が `ensure_saved_at` を利用して UTC で初期化する。
   - `feed_to_record` / `record_to_feed` は新フィールドを相互変換し、`updated_at` を latest 保存時刻で上書きする仕様にする。
 - SQLModel のメタデータから `RssBucketRecord` を取り除くため、`src/domain/news/rss_link/model.py` を `RssItem` のみが残る構成へ改修する。
 - 既存データは開発段階で存在しない前提のため、スキーマ変更後は `data/datadoggo.db` を削除して `initialize_database()` を再実行する運用を明記する（ALTER TABLE 系操作は行わない）。
 
 ### 3.2 サービス/コマンド層
-- `create_feed` の引数から `bucket_id` を除外し、呼び出し側が URL・タイトル・HTTP ステータス・公開日時のみで FeedItem を生成できるようにする。
+- `create_feed` の引数から `bucket_id` を除外し、呼び出し側が URL・タイトル・HTTP ステータス・公開日時のみで HttpRequestTask を生成できるようにする。
 - `store_feed` は以下を担う:
   - Upsert 前に `initialize_database()` を呼んでテーブルを生成（開発環境では DB ファイル削除後に再生成される想定）。
   - 既存レコードに対する更新時は `created_at` を保持しつつ `updated_at` を現在時刻に差し替える。
@@ -62,5 +62,5 @@
 - SQLite ファイル削除を前提とするため、誤って不要な環境の DB を削除しないよう注意点を README/AGENTS に明記する。
 - 過去ログや既存運用が `bucket_id` を前提としている場合、ダッシュボード等のクエリも修正が必要。
   - 対応: 実装前にログ項目の名称変更 (`bucket_id` → `rss_source` など) を関係者へ周知する。
-- `FeedItem` の ID は URL ハッシュのまま変わらないため、同一 URL での再取得が想定通り `updated_at` のみ更新となるか、既存クライアントの期待を再確認する必要がある。
+- `HttpRequestTask` の ID は URL ハッシュのまま変わらないため、同一 URL での再取得が想定通り `updated_at` のみ更新となるか、既存クライアントの期待を再確認する必要がある。
   - 対応: 実装後の検証で同一 URL の更新ケースを重点確認する。

@@ -35,7 +35,7 @@
 
 ### モデル・サービス層 (完了)
 - [src/domain/task_queue/http_request/model.py](../../../src/domain/task_queue/http_request/model.py)
-  - `FeedItem` → `HttpRequestTask` にリネーム
+  - `HttpRequestTask` → `HttpRequestTask` にリネーム
   - `FeedRecord` → `HttpRequestTaskRecord` にリネーム
   - `__tablename__ = "feed_item"` → `"http_request_queue"` に変更
   - `title: str` → `description: str | None` に変更
@@ -56,7 +56,7 @@
 
 - [src/domain/task_queue/http_request/command.py](../../../src/domain/task_queue/http_request/command.py)
   - `store_feed()` → `store_http_request()` にリネーム
-  - 引数: `FeedItem` → `HttpRequestTask` に変更
+  - 引数: `HttpRequestTask` → `HttpRequestTask` に変更
   - 全テストを更新
 
 - [src/domain/task_queue/http_request/search.py](../../../src/domain/task_queue/http_request/search.py)
@@ -77,7 +77,7 @@
   - 全テストを更新
 
 - [src/domain/news/article/fetch.py](../../../src/domain/news/article/fetch.py)
-  - `FeedItem` → `HttpRequestTask` に変更
+  - `HttpRequestTask` → `HttpRequestTask` に変更
   - フィールド参照: `.title` → `.description` に変更
   - フィールド参照: `.pub_date` → `.created_at` に変更
 
@@ -104,7 +104,7 @@
 
 ## Phase 1: モデル層の変更 (task_queue/http_request/model.py) ✅
 **実装内容**:
-- `FeedItem` → `HttpRequestTask` にリネーム
+- `HttpRequestTask` → `HttpRequestTask` にリネーム
 - `FeedRecord` → `HttpRequestTaskRecord` にリネーム
 - `__tablename__` を `"http_request_queue"` に変更
 - フィールド変更:
@@ -140,7 +140,7 @@
 ## Phase 3: コマンド層の変更 (task_queue/http_request/command.py) ✅
 **実装内容**:
 - `store_feed()` → `store_http_request()` にリネーム
-- 引数: `FeedItem` → `HttpRequestTask`
+- 引数: `HttpRequestTask` → `HttpRequestTask`
 - インポート修正
 - テスト修正 (同ファイル内の `TestMod` 1テスト)
 
@@ -177,7 +177,7 @@
 
 ## Phase 6: Article取得層の修正 (article/fetch.py) ✅
 **実装内容**:
-- インポート: `FeedItem` → `HttpRequestTask`
+- インポート: `HttpRequestTask` → `HttpRequestTask`
 - インポートパス: `src.domain.news.feed` → `src.domain.task_queue.http_request`
 - フィールド参照:
   - `.title` → `.description` (45行目)
