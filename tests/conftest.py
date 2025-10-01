@@ -46,7 +46,15 @@ def project_root(fs: FakeFilesystem) -> Path:
 @pytest.fixture(autouse=True)
 def setup_common_dirs(fs: FakeFilesystem):
     """テストで頻繁に使用されるディレクトリを事前作成"""
+    from pathlib import Path
+
     common_dirs = ["/tmp", "/data"]
     for dir_path in common_dirs:
         if not fs.exists(dir_path):
             fs.create_dir(dir_path)
+
+    # mockディレクトリを実ファイルシステムから仮想FSにマップ
+    project_root = Path(__file__).parent.parent
+    mock_dir = project_root / "mock"
+    if mock_dir.exists():
+        fs.add_real_directory(mock_dir, read_only=True)
