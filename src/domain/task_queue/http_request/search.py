@@ -49,7 +49,9 @@ def search_http_requests(query: HttpRequestQuery) -> list[HttpRequestTask]:
 
         if query.description:
             statement = statement.where(
-                # SQLModelの動的属性(contains)は型チェッカーで認識されないため型無視
+                # SQLModelの動的属性(contains)はSQLAlchemyカラムのメソッドだが、
+                # 型チェッカーでは認識されない既知の問題のため型無視
+                # 参考: https://github.com/fastapi/sqlmodel/discussions/428
                 HttpRequestTaskRecord.description.contains(query.description)  # type: ignore[attr-defined]
             )
 
@@ -58,7 +60,9 @@ def search_http_requests(query: HttpRequestQuery) -> list[HttpRequestTask]:
 
         if query.group:
             statement = statement.where(
-                # SQLModelの動的属性(contains)は型チェッカーで認識されないため型無視
+                # SQLModelの動的属性(contains)はSQLAlchemyカラムのメソッドだが、
+                # 型チェッカーでは認識されない既知の問題のため型無視
+                # 参考: https://github.com/fastapi/sqlmodel/discussions/428
                 HttpRequestTaskRecord.group.contains(query.group)  # type: ignore[attr-defined]
             )
 
@@ -78,7 +82,9 @@ def search_http_requests(query: HttpRequestQuery) -> list[HttpRequestTask]:
             )
 
         statement = (
-            # SQLModelカラムのdesc()呼び出しは型チェッカーで認識されないため型無視
+            # SQLAlchemyのdesc()関数はカラム型を受け取るが、SQLModelの型定義では
+            # カラム型が適切に推論されない既知の問題のため型無視
+            # 参考: https://github.com/fastapi/sqlmodel/discussions/428
             statement.order_by(desc(HttpRequestTaskRecord.created_at))  # type: ignore[arg-type]
             .offset(query.offset)
             .limit(query.limit)

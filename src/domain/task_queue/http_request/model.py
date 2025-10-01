@@ -15,6 +15,9 @@ _EXPECTED_GROUP_PARTS = 2
 def validate_group_format(value: str | None) -> str | None:
     """groupフィールドの形式を検証する
 
+    形式: "{source}:{category}" (例: "bbc:world")
+    注意: 前後の空白や空の要素は不正として扱う。正規化は行わない。
+
     Args:
         value: 検証対象のgroup値
 
@@ -27,16 +30,25 @@ def validate_group_format(value: str | None) -> str | None:
     if value is None:
         return None
 
+    error_msg = (
+        f"groupは'{{source}}:{{category}}'形式である必要があります "
+        f"(例: 'bbc:world'): {value}"
+    )
+
+    # 前後の空白を検出（正規化は行わない）
+    if value != value.strip():
+        raise ValueError(error_msg)
+
     if ":" not in value:
-        raise ValueError(
-            f"groupは'{{source}}:{{category}}'形式である必要があります: {value}"
-        )
+        raise ValueError(error_msg)
 
     parts = value.split(":")
-    if len(parts) != _EXPECTED_GROUP_PARTS or not all(part.strip() for part in parts):
-        raise ValueError(
-            f"groupは'{{source}}:{{category}}'形式である必要があります: {value}"
-        )
+    if len(parts) != _EXPECTED_GROUP_PARTS:
+        raise ValueError(error_msg)
+
+    # 各要素が空でなく、前後に空白がないことを確認
+    if not all(part and part == part.strip() for part in parts):
+        raise ValueError(error_msg)
 
     return value
 
@@ -132,6 +144,35 @@ class TestMod:
         with pytest.raises(ValueError, match="source.*category"):
             validate_group_format("a:b:c")
 
+    def test_validate_group_format_rejects_whitespace_edge_cases(self) -> None:
+        """
+        docs:
+            目的:
+                validate_group_format が空白を含む不正な形式を拒否することを確認する。
+            検証観点:
+                - 前後に空白を含む要素を拒否する（正規化は行わない）。
+                - 空白のみの要素を拒否する。
+        """
+
+        import pytest
+
+        # 前後に空白を含む場合は拒否
+        with pytest.raises(ValueError, match="source.*category"):
+            validate_group_format(" bbc:world")
+
+        with pytest.raises(ValueError, match="source.*category"):
+            validate_group_format("bbc:world ")
+
+        with pytest.raises(ValueError, match="source.*category"):
+            validate_group_format(" bbc : world ")
+
+        # 空白のみの要素
+        with pytest.raises(ValueError, match="source.*category"):
+            validate_group_format(" :world")
+
+        with pytest.raises(ValueError, match="source.*category"):
+            validate_group_format("bbc: ")
+
     def test_is_success_and_backlog(self) -> None:
         """
         docs:
@@ -187,3 +228,69 @@ class TestMod:
             updated_at=base_time,
         )
         assert no_group.group is None
+
+    def test_http_request_task_raises_on_invalid_group(self) -> None:
+        """
+        docs:
+            目的:
+                HttpRequestTaskが不正なgroup値でインスタンス化された際に
+                ValueErrorが発生することを確認する。
+            検証観点:
+                - 不正なgroup形式でValidationErrorが発生する。
+                - エラーメッセージに例が含まれる。
+        """
+
+        from datetime import datetime, timezone
+
+        from pydantic import HttpUrl, ValidationError
+
+        base_time = datetime(2025, 9, 29, 0, 0, tzinfo=timezone.utc)
+        url_value = HttpUrl("https://example.com/rss")
+
+        # コロンなしの不正な形式
+        try:
+            HttpRequestTask(
+                id="invalid1",
+                url=url_value,
+                description="invalid",
+                group="invalid_format",
+                status_code=SUCCESS_STATUS_CODE,
+                created_at=base_time,
+                updated_at=base_time,
+            )
+            raise AssertionError("ValidationErrorが発生しませんでした")
+        except ValidationError as error:
+            error_msg = str(error)
+            assert "source" in error_msg
+            assert "category" in error_msg
+            assert "bbc:world" in error_msg  # 例が含まれることを確認
+
+        # 空の要素を含む形式
+        try:
+            HttpRequestTask(
+                id="invalid2",
+                url=url_value,
+                description="invalid",
+                group="test:",
+                status_code=SUCCESS_STATUS_CODE,
+                created_at=base_time,
+                updated_at=base_time,
+            )
+            raise AssertionError("ValidationErrorが発生しませんでした")
+        except ValidationError:
+            pass  # 期待通り
+
+        # 前後に空白を含む形式
+        try:
+            HttpRequestTask(
+                id="invalid3",
+                url=url_value,
+                description="invalid",
+                group=" test:category ",
+                status_code=SUCCESS_STATUS_CODE,
+                created_at=base_time,
+                updated_at=base_time,
+            )
+            raise AssertionError("ValidationErrorが発生しませんでした")
+        except ValidationError:
+            pass  # 期待通り
