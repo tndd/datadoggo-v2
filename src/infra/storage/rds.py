@@ -15,38 +15,11 @@ DEFAULT_DATABASE_URL = "sqlite:///data/datadoggo.db"
 
 LOG = get_logger()
 
-# pytest実行時にインメモリDBエンジンをキャッシュ（テスト内で同一インスタンスを共有）
-_test_engine: Engine | None = None
-
-
-def get_database_url() -> str:
-    """
-    データベースURLを取得する
-
-    - pytest実行時: インメモリDB
-    - それ以外: 本番DB (data/datadoggo.db)
-    """
-
-    if "pytest" in sys.modules:
-        return "sqlite:///:memory:"
-
-    return DEFAULT_DATABASE_URL
-
 
 def create_sqlite_engine(url: str | None = None, *, echo: bool = False) -> Engine:
     """SQLite向けのSQLAlchemyエンジンを生成する"""
 
-    global _test_engine  # noqa: PLW0603
-
-    database_url = url or get_database_url()
-
-    # pytest実行時かつ明示的なURL指定がない場合のみキャッシュを使用
-    # （環境変数で別DBを指定する特殊なテストケースに対応）
-    if "pytest" in sys.modules and url is None and database_url == "sqlite:///:memory:":
-        if _test_engine is None:
-            _test_engine = _create_engine(database_url, echo)
-        return _test_engine
-
+    database_url = url or DEFAULT_DATABASE_URL
     return _create_engine(database_url, echo)
 
 

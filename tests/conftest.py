@@ -20,21 +20,30 @@ def app_logging(fs: FakeFilesystem):
     reset_logging()
 
 
-@pytest.fixture(autouse=True)
-def initialize_test_db():
-    """各テスト実行前に自動的にDBを初期化"""
-    import infra.storage.rds
-    from infra.storage.rds import initialize_database
+@pytest.fixture(scope="session")
+def test_db_engine():
+    """テスト用インメモリDBエンジンを提供（セッションスコープ）"""
+    from infra.storage.rds import create_sqlite_engine, initialize_database
 
     # テーブル定義をインポート（テーブル作成に必要）
     import domain.task_queue.http_request.model  # noqa: F401
 
-    # テスト開始前にエンジンキャッシュをクリア
-    if hasattr(infra.storage.rds, "_test_engine"):
-        infra.storage.rds._test_engine = None
+    # インメモリDBエンジンを作成してテーブル初期化
+    engine = create_sqlite_engine(url="sqlite:///:memory:")
+    initialize_database(engine)
+    return engine
 
-    # DBを初期化（新しいエンジンでテーブル作成）
-    initialize_database()
+
+@pytest.fixture(autouse=True)
+def setup_test_db(test_db_engine, monkeypatch):
+    """テスト用DBをグローバルに設定"""
+    import infra.storage.rds
+
+    # create_sqlite_engineをモックしてtest_db_engineを返すようにする
+    def mock_create_engine(url=None, echo=False):
+        return test_db_engine
+
+    monkeypatch.setattr(infra.storage.rds, "create_sqlite_engine", mock_create_engine)
 
 
 @pytest.fixture
