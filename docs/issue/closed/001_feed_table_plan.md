@@ -16,7 +16,7 @@
 - `src/domain/news/feed/search.py`
   - `FeedQuery`入力モデルと、`find_feed_by_id`/`search_feeds`による読み出し処理を提供する。
 - `src/domain/news/feed/model.py`
-  - `FeedItem`と`FeedRecord`を定義する。
+  - `HttpRequestTask`と`FeedRecord`を定義する。
 - `src/domain/news/feed/convert.py`
   - URL検証とレコード⇔ドメイン変換ロジックを提供する。
 - `src/domain/news/feed/service.py`
@@ -44,7 +44,7 @@
 3. **ハッシュユーティリティ整備 (`src/infra/compute.py`)**
    - URL文字列をハッシュ化する関数(例:`hash_text_sha256`)を定義し、既存利用箇所との整合性を確認。
 4. **ドメイン層 (`src/domain/news/feed/`)**
-   - `model.py`で`FeedItem`/`FeedRecord`を定義。
+   - `model.py`で`HttpRequestTask`/`FeedRecord`を定義。
    - `convert.py`でURL検証と変換ヘルパーを提供する。
    - `command.py`で`create_feed`/`store_feed`を提供し、`convert.py`・`service.py`を利用する。
    - `search.py`で`FeedQuery`・`find_feed_by_id`・`search_feeds`を提供する。
@@ -63,7 +63,7 @@
 src/domain/news/feed
   ├─ command.py (store_feed)
   ├─ convert.py (ensure_http_url, feed_to_record, record_to_feed)
-  ├─ model.py (FeedItem, FeedRecord)
+  ├─ model.py (HttpRequestTask, FeedRecord)
   ├─ search.py (FeedQuery, find_feed_by_id, search_feeds)
   └─ service.py (ensure_http_url, create_feed)
 src/infra/storage/rds.py

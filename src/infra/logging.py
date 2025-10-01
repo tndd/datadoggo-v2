@@ -290,10 +290,12 @@ class TestMod:
                 - label が先頭2階層へ縮約される。
         """
 
-        extra = self._create_logger_extra("probe_domain.news.feed.service")
+        extra = self._create_logger_extra(
+            "probe_domain.task_queue.http_request.service"
+        )
 
-        assert extra["component"] == "probe_domain.news.feed.service"
-        assert extra["label"] == "probe_domain.news"
+        assert extra["component"] == "probe_domain.task_queue.http_request.service"
+        assert extra["label"] == "probe_domain.task_queue"
 
     def test_resolve_component_from_src_namespaced_module(self) -> None:
         """

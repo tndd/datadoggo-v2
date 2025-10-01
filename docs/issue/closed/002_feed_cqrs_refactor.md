@@ -52,20 +52,20 @@
 src/domain/news
 ├── feed
 │   ├── command.py
-│   │   └── store_feed(feed: FeedItem) -> FeedItem
+│   │   └── store_feed(feed: HttpRequestTask) -> HttpRequestTask
 │   ├── convert.py
 │   │   ├── ensure_http_url(value: str | HttpUrl) -> HttpUrl
-│   │   ├── feed_to_record(feed: FeedItem) -> FeedRecord
-│   │   └── record_to_feed(record: FeedRecord) -> FeedItem
+│   │   ├── feed_to_record(feed: HttpRequestTask) -> FeedRecord
+│   │   └── record_to_feed(record: FeedRecord) -> HttpRequestTask
 │   ├── model.py
-│   │   ├── FeedItem(BaseModel)
+│   │   ├── HttpRequestTask(BaseModel)
 │   │   └── FeedRecord(SQLModel)
 │   ├── search.py
 │   │   ├── class FeedQuery(BaseModel)
-│   │   ├── find_feed_by_id(feed_id: str) -> FeedItem | None
-│   │   └── search_feeds(query: FeedQuery) -> list[FeedItem]
+│   │   ├── find_feed_by_id(feed_id: str) -> HttpRequestTask | None
+│   │   └── search_feeds(query: FeedQuery) -> list[HttpRequestTask]
 │   └── service.py
 │       ├── ensure_http_url(value: str | HttpUrl) -> HttpUrl
-│       └── create_feed(url: str, title: str, status_code: int, pub_date: datetime) -> FeedItem
+│       └── create_feed(url: str, title: str, status_code: int, pub_date: datetime) -> HttpRequestTask
 └── rss.py 他
 ```

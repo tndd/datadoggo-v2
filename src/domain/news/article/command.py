@@ -13,17 +13,18 @@ def save_article_content(article: Article) -> str:
     """記事のHTMLコンテンツをバケットに保存する"""
 
     saved_key = save_object(
-        payload=article.html_content,
+        payload=article.content,
         bucket_name=BUCKET_NAME,
         object_key=article.id,
     )
     if not saved_key:
-        raise RuntimeError(f"記事HTMLの保存に失敗しました: feed_id={article.id}")
+        msg = f"記事HTMLの保存に失敗しました: http_request_id={article.id}"
+        raise RuntimeError(msg)
 
     return saved_key
 
 
-# 取得失敗はFeedItemのstatus_codeで管理されるため、この関数は不要
+# 取得失敗はHttpRequestTaskのstatus_codeで管理されるため、この関数は不要
 
 
 class TestMod:
@@ -52,12 +53,15 @@ class TestMod:
             fs.create_dir(str(project_root))
         os.chdir(project_root)
 
+        base_time = datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc)
         article = Article(
             id="abc",
             url=cast(HttpUrl, "https://example.com/article"),
-            title="サンプル",
-            pub_date=datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc),
-            html_content="<html>body</html>",
+            content="<html>body</html>",
+            group="test:command",
+            created_at=base_time,
+            updated_at=base_time,
+            description="サンプル",
         )
 
         saved_key = save_article_content(article)
@@ -79,12 +83,15 @@ class TestMod:
 
         from pydantic import HttpUrl
 
+        base_time = datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc)
         article = Article(
             id="xyz",
             url=cast(HttpUrl, "https://example.com/failure"),
-            title="失敗",
-            pub_date=datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc),
-            html_content="<html>failure</html>",
+            content="<html>failure</html>",
+            group="test:failure",
+            created_at=base_time,
+            updated_at=base_time,
+            description="失敗",
         )
 
         import sys

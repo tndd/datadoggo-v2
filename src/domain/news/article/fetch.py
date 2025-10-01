@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
 from infra.logging import get_logger
-from src.domain.news.feed.model import FeedItem
+from src.domain.task_queue.http_request.model import HttpRequestTask
 
 from .model import Article
 
@@ -12,44 +12,48 @@ _log = get_logger()
 
 
 def fetch_article_content(
-    feed: FeedItem, *, client: HttpsClient | None = None
+    request: HttpRequestTask, *, client: HttpsClient | None = None
 ) -> Article | None:
-    """FeedItemを基に記事HTMLを取得しArticleを生成する"""
+    """HttpRequestTaskを基に記事HTMLを取得しArticleを生成する"""
 
     http_client = client or HttpsClient()
 
     try:
-        response = http_client.get(str(feed.url))
-    except Exception as error:  # pragma: no cover - ネットワーク例外のログ確認
+        response = http_client.get(str(request.url))
+    except RuntimeError:  # pragma: no cover - ネットワーク例外のログ確認
         _log.exception(
-            "記事HTML取得中に例外が発生しました",
-            feed_id=feed.id,
-            url=str(feed.url),
-            error=str(error),
+            "記事HTML取得中にネットワークエラーが発生しました",
+            http_request_id=request.id,
+            url=str(request.url),
         )
         return None
 
     if response.status_code != HTTP_STATUS_OK:
         _log.warning(
             "記事HTMLの取得に失敗しました",
-            feed_id=feed.id,
-            url=str(feed.url),
+            http_request_id=request.id,
+            url=str(request.url),
             status_code=response.status_code,
         )
         return None
 
+    from datetime import datetime, timezone
+
     html = _decode_body(response)
+    now = datetime.now(timezone.utc)
     article = Article(
-        id=feed.id,
-        url=feed.url,
-        title=feed.title,
-        pub_date=feed.pub_date,
-        html_content=html,
+        id=request.id,
+        url=request.url,
+        content=html,
+        group=request.group,
+        created_at=request.created_at,  # 元のpublished_atを保持
+        updated_at=now,  # 更新日時のみ現在時刻
+        description=request.description,
     )
     _log.info(
         "記事HTMLの取得に成功しました",
-        feed_id=feed.id,
-        url=str(feed.url),
+        http_request_id=request.id,
+        url=str(request.url),
         bytes=len(response.body),
     )
     return article
@@ -71,7 +75,8 @@ class TestMod:
             目的: ステータス200の場合にArticleが生成されることを確認する。
             検証観点:
                 - HTML本文がデコードされる。
-                - FeedItemの属性が引き継がれる。
+                - HttpRequestTaskの属性が引き継がれる。
+                - description が nullable であることを確認する。
         """
 
         from datetime import datetime, timezone
@@ -100,21 +105,38 @@ class TestMod:
 
         client = HttpsClient(fetcher=mock_fetcher)
 
-        feed = FeedItem(
+        request = HttpRequestTask(
             id="abc",
             url=cast(HttpUrl, "https://example.com/detail"),
-            title="テスト",
+            description="テスト",
+            group="test:fetch",
             status_code=200,
-            pub_date=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
             created_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
             updated_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
         )
 
-        article = fetch_article_content(feed, client=client)
+        article = fetch_article_content(request, client=client)
 
         assert article is not None
-        assert article.html_content == html_text
-        assert article.id == feed.id
+        assert article.content == html_text
+        assert article.id == request.id
+        assert article.description == "テスト"
+
+        # description が None のケース
+        request_no_desc = HttpRequestTask(
+            id="xyz",
+            url=cast(HttpUrl, "https://example.com/no-title"),
+            description=None,
+            group="test:fetch",
+            status_code=200,
+            created_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
+            updated_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
+        )
+
+        article_no_desc = fetch_article_content(request_no_desc, client=client)
+
+        assert article_no_desc is not None
+        assert article_no_desc.description is None
 
     def test_fetch_article_content_returns_none_on_error_status(self) -> None:
         """
@@ -147,16 +169,16 @@ class TestMod:
 
         client = HttpsClient(fetcher=mock_fetcher)
 
-        feed = FeedItem(
+        request = HttpRequestTask(
             id="abc",
             url=cast(HttpUrl, "https://example.com/detail"),
-            title="テスト",
+            description="テスト",
+            group="test:fetch",
             status_code=None,
-            pub_date=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
             created_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
             updated_at=datetime(2025, 9, 29, 12, 0, tzinfo=timezone.utc),
         )
 
-        article = fetch_article_content(feed, client=client)
+        article = fetch_article_content(request, client=client)
 
         assert article is None
