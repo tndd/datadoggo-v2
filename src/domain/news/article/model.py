@@ -16,14 +16,19 @@ class ArticleFetchStatus(str, Enum):
 
 
 class Article(BaseModel):
-    """メタデータとコンテンツを結合したビュー"""
+    """メタデータとコンテンツを結合したビュー
+
+    Attributes:
+        created_at: 記事の公開日時(UTC)。HttpRequestTaskのcreated_atを継承。
+        updated_at: 記事HTMLの取得日時(UTC)。fetch時の現在時刻が設定される。
+    """
 
     id: str
     url: HttpUrl
     content: str  # 記事のHTMLコンテンツ
     group: str | None  # グループ名
-    created_at: datetime  # レコードの生成日時(UTC)
-    updated_at: datetime  # レコードの最終更新日時(UTC)
+    created_at: datetime  # 記事の公開日時(UTC)
+    updated_at: datetime  # 記事HTMLの取得日時(UTC)
     description: str | None  # 説明。記事のタイトルや注釈など
 
 
