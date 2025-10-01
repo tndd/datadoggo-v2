@@ -2,6 +2,9 @@
 
 from pathlib import Path
 
+import pytest
+from pyfakefs.fake_filesystem import FakeFilesystem
+
 from infra.storage.file import (
     SaveFormat,
     load_bytes,
@@ -11,6 +14,7 @@ from infra.storage.file import (
 )
 
 
+@pytest.mark.no_fs
 def test_load_file() -> None:
     """
     docs:
@@ -23,12 +27,12 @@ def test_load_file() -> None:
     # absolute
     text = load_file("mock/sample.txt")
     assert text == "sample text"
-    # relative
+    # relative - 実ファイルシステムのfile.pyを読む
     text = load_file("./file.py")
     assert text.startswith("# file.py")  # WARN: その場しのぎのテスト
 
 
-def test_save_content_to_file(tmp_path: Path) -> None:
+def test_save_content_to_file(fs: FakeFilesystem) -> None:
     """
     docs:
         目的: save_content_to_file の保存動作を確認する。
@@ -37,7 +41,8 @@ def test_save_content_to_file(tmp_path: Path) -> None:
             - ファイルパス未指定時にタイムスタンプ付きファイル名が生成される。
     """
 
-    output_dir = tmp_path / "mock"
+    output_dir = Path("/tmp/mock")
+    fs.create_dir(str(output_dir))
     path_str = save_content_to_file(
         "テストコンテンツ",
         format=SaveFormat.TEXT,
@@ -48,7 +53,7 @@ def test_save_content_to_file(tmp_path: Path) -> None:
     assert saved_path.read_text(encoding="utf-8") == "テストコンテンツ"
 
 
-def test_save_and_load_bytes(tmp_path: Path) -> None:
+def test_save_and_load_bytes(fs: FakeFilesystem) -> None:
     """
     docs:
         目的: save_bytes_to_file / load_bytes のバイナリ入出力を確認する。
@@ -57,7 +62,7 @@ def test_save_and_load_bytes(tmp_path: Path) -> None:
             - 保存時にディレクトリが自動作成される。
     """
 
-    target_path = tmp_path / "bin" / "data.bin"
+    target_path = Path("/tmp/bin/data.bin")
     payload = b"binary-content"
 
     written = save_bytes_to_file(payload, target_path)

@@ -9,7 +9,9 @@ from pyfakefs.fake_filesystem import FakeFilesystem
 from infra.parse import _extract_local_name, parse_rss
 
 
-def test_parse_rss_returns_rss_root(fs: FakeFilesystem) -> None:
+def test_parse_rss_returns_rss_root(
+    fs: FakeFilesystem, real_project_root: Path
+) -> None:
     """
     docs:
         目的:
@@ -21,9 +23,8 @@ def test_parse_rss_returns_rss_root(fs: FakeFilesystem) -> None:
     """
 
     # 実ファイルシステムからmockディレクトリを追加
-    project_root = Path(__file__).parent.parent.parent
-    fs.add_real_directory(project_root / "mock", read_only=True)
-    fixture_path = project_root / "mock" / "google_news.rss"
+    fs.add_real_directory(real_project_root / "mock", read_only=True)
+    fixture_path = real_project_root / "mock" / "google_news.rss"
     content = fixture_path.read_bytes()
 
     root = parse_rss(content)

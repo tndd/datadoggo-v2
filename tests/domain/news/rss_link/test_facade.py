@@ -1,11 +1,15 @@
 """domain.news.rss_link.facade のテスト"""
 
+from pathlib import Path
+
+from pyfakefs.fake_filesystem import FakeFilesystem
+
 from domain.news.rss_link.facade import fetch_rss_elements_from_query
 from domain.news.rss_link.search import RssItemQuery
 from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
 
 
-def test_fetch_rss_elements_from_query_returns_elements(tmp_path) -> None:
+def test_fetch_rss_elements_from_query_returns_elements(fs: FakeFilesystem) -> None:
     """
     docs:
         目的:
@@ -15,9 +19,10 @@ def test_fetch_rss_elements_from_query_returns_elements(tmp_path) -> None:
             - 返却された Element からタイトルが読み取れる。
     """
 
-    yaml_path = tmp_path / "links.yml"
-    yaml_path.write_text(
-        "\n".join(
+    yaml_path = Path("/tmp/links.yml")
+    fs.create_file(
+        str(yaml_path),
+        contents="\n".join(
             [
                 "sample:",
                 "  headline: https://example.com/rss",
@@ -26,7 +31,6 @@ def test_fetch_rss_elements_from_query_returns_elements(tmp_path) -> None:
                 "  daily: https://example.com/rss-3",
             ]
         ),
-        encoding="utf-8",
     )
 
     rss_payloads = {
@@ -71,7 +75,9 @@ def test_fetch_rss_elements_from_query_returns_elements(tmp_path) -> None:
     }
 
 
-def test_fetch_rss_elements_from_query_returns_empty_when_not_matched(tmp_path) -> None:
+def test_fetch_rss_elements_from_query_returns_empty_when_not_matched(
+    fs: FakeFilesystem,
+) -> None:
     """
     docs:
         目的: クエリに一致するリンクが無い場合でも空リストで返ることを確認する。
@@ -79,13 +85,13 @@ def test_fetch_rss_elements_from_query_returns_empty_when_not_matched(tmp_path) 
             - 通信は発生せず空リストとなる。
     """
 
-    yaml_path = tmp_path / "links.yml"
-    yaml_path.write_text(
-        """
+    yaml_path = Path("/tmp/links.yml")
+    fs.create_file(
+        str(yaml_path),
+        contents="""
         sample:
         headline: https://example.com/rss
         """.strip(),
-        encoding="utf-8",
     )
 
     def error_fetcher(

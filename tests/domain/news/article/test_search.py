@@ -1,8 +1,6 @@
 """domain.news.article.search のテスト"""
 
-import os
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import cast
 
 from pydantic import HttpUrl
@@ -11,7 +9,7 @@ from pyfakefs.fake_filesystem import FakeFilesystem
 from domain.news.article.command import save_article_content
 from domain.news.article.model import Article
 from domain.news.article.search import find_article_by_id, search_articles_by_ids
-from infra.storage.rds import create_sqlite_engine, session_scope
+from infra.storage.rds import session_scope
 from domain.task_queue.http_request.model import HttpRequestTaskRecord
 
 
@@ -23,18 +21,8 @@ def test_find_article_by_id_returns_article(fs: FakeFilesystem) -> None:
             - HttpRequestTaskRecord とバケット HTML から Article が復元される。
     """
 
-    project_root = Path(__file__).parent.parent.parent.parent
-    if not fs.exists(str(project_root)):
-        fs.create_dir(str(project_root))
-    os.chdir(project_root)
-
-    if not fs.exists("/tmp"):
-        fs.create_dir("/tmp")
-
     # pytestにより自動的にインメモリDBが使用される(fixtureで初期化済み)
-    engine = create_sqlite_engine()
-
-    with session_scope(engine) as session:
+    with session_scope() as session:
         # HttpRequestTaskレコードを作成
         request_time = datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc)
         http_request_record = HttpRequestTaskRecord(
@@ -76,18 +64,8 @@ def test_find_article_by_id_returns_none_when_missing(fs: FakeFilesystem) -> Non
             - status_code が 200以外の場合も None。
     """
 
-    project_root = Path(__file__).parent.parent.parent.parent
-    if not fs.exists(str(project_root)):
-        fs.create_dir(str(project_root))
-    os.chdir(project_root)
-
-    if not fs.exists("/tmp"):
-        fs.create_dir("/tmp")
-
     # pytestにより自動的にインメモリDBが使用される(fixtureで初期化済み)
-    engine = create_sqlite_engine()
-
-    with session_scope(engine) as session:
+    with session_scope() as session:
         # 未登録IDのテスト
         assert find_article_by_id(session, "missing") is None
 
@@ -120,17 +98,7 @@ def test_search_articles_by_ids_returns_dict(fs: FakeFilesystem) -> None:
             - キーはhttp_request_idと一致する。
     """
 
-    project_root = Path(__file__).parent.parent.parent.parent
-    if not fs.exists(str(project_root)):
-        fs.create_dir(str(project_root))
-    os.chdir(project_root)
-
-    if not fs.exists("/tmp"):
-        fs.create_dir("/tmp")
-
-    engine = create_sqlite_engine()
-
-    with session_scope(engine) as session:
+    with session_scope() as session:
         # 複数のHttpRequestTaskレコードを作成
         request_time = datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc)
         http_request_records = [
@@ -189,17 +157,7 @@ def test_search_articles_by_ids_skips_failures(fs: FakeFilesystem) -> None:
             - 未登録のIDはNone。
     """
 
-    project_root = Path(__file__).parent.parent.parent.parent
-    if not fs.exists(str(project_root)):
-        fs.create_dir(str(project_root))
-    os.chdir(project_root)
-
-    if not fs.exists("/tmp"):
-        fs.create_dir("/tmp")
-
-    engine = create_sqlite_engine()
-
-    with session_scope(engine) as session:
+    with session_scope() as session:
         request_time = datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc)
 
         # 成功するレコード
@@ -281,16 +239,6 @@ def test_search_articles_by_ids_returns_empty_dict_for_empty_list(
             - http_request_ids=[] で空dictが返る。
     """
 
-    project_root = Path(__file__).parent.parent.parent.parent
-    if not fs.exists(str(project_root)):
-        fs.create_dir(str(project_root))
-    os.chdir(project_root)
-
-    if not fs.exists("/tmp"):
-        fs.create_dir("/tmp")
-
-    engine = create_sqlite_engine()
-
-    with session_scope(engine) as session:
+    with session_scope() as session:
         retrieved = search_articles_by_ids(session, [])
         assert retrieved == {}

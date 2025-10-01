@@ -10,7 +10,10 @@ from domain.task_queue.http_request.service import convert_rss_items_to_http_req
 from infra.parse import parse_rss
 
 
-def test_convert_rss_items_to_http_requests_parses_mock_feed() -> None:
+@pytest.mark.no_fs
+def test_convert_rss_items_to_http_requests_parses_mock_feed(
+    real_project_root: Path,
+) -> None:
     """
     docs:
         目的:
@@ -21,8 +24,8 @@ def test_convert_rss_items_to_http_requests_parses_mock_feed() -> None:
             - titleがdescriptionとして設定される。
     """
 
-    project_root = Path(__file__).parent.parent.parent.parent
-    fixture_path = project_root / "mock" / "google_news.rss"
+    # 実ファイルシステムから直接読み込む
+    fixture_path = real_project_root / "mock" / "google_news.rss"
     content = fixture_path.read_bytes()
     root = parse_rss(content)
 

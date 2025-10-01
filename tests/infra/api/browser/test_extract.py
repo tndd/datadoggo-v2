@@ -13,7 +13,7 @@ from infra.api.browser.extract import (
 from infra.storage.file import load_file
 
 
-def test_extract_page_content(fs: FakeFilesystem) -> None:
+def test_extract_page_content(fs: FakeFilesystem, real_project_root: Path) -> None:
     """
     docs:
         目的: extract_page_content の各モードでの変換動作を確認する。
@@ -24,9 +24,8 @@ def test_extract_page_content(fs: FakeFilesystem) -> None:
             - 不正なモードの場合はValueErrorが発生する
     """
     # プロジェクトルートから計算
-    project_root = Path(__file__).parent.parent.parent.parent
-    fs.add_real_directory(project_root / "mock", read_only=True)
-    html = load_file(str(project_root / "mock/plain.html"))
+    fs.add_real_directory(real_project_root / "mock", read_only=True)
+    html = load_file(str(real_project_root / "mock/plain.html"))
 
     # HTMLモード
     result_html = extract_page_content(html, ExtractMode.HTML)
@@ -50,7 +49,7 @@ def test_extract_page_content(fs: FakeFilesystem) -> None:
         pass
 
 
-def test_parse_html_to_text(fs: FakeFilesystem) -> None:
+def test_parse_html_to_text(fs: FakeFilesystem, real_project_root: Path) -> None:
     """
     docs:
         目的: _parse_to_text の基本的なHTML→テキスト変換を確認する。
@@ -59,9 +58,8 @@ def test_parse_html_to_text(fs: FakeFilesystem) -> None:
             - スクリプトやスタイルが除去される
             - テキスト内容が適切に抽出される
     """
-    project_root = Path(__file__).parent.parent.parent.parent
-    fs.add_real_directory(project_root / "mock", read_only=True)
-    html = load_file(str(project_root / "mock/plain.html"))
+    fs.add_real_directory(real_project_root / "mock", read_only=True)
+    html = load_file(str(real_project_root / "mock/plain.html"))
     text = _parse_to_text(html)
 
     assert text is not None
@@ -72,7 +70,7 @@ def test_parse_html_to_text(fs: FakeFilesystem) -> None:
     assert "Rust言語の新機能について" in text
 
 
-def test_parse_html_to_markdown(fs: FakeFilesystem) -> None:
+def test_parse_html_to_markdown(fs: FakeFilesystem, real_project_root: Path) -> None:
     """
     docs:
         目的: _parse_to_markdown の基本的なHTML→Markdown変換を確認する。
@@ -81,9 +79,8 @@ def test_parse_html_to_markdown(fs: FakeFilesystem) -> None:
             - 見出しが # 記法になる
             - リストやテーブルが適切に変換される
     """
-    project_root = Path(__file__).parent.parent.parent.parent
-    fs.add_real_directory(project_root / "mock", read_only=True)
-    html = load_file(str(project_root / "mock/plain.html"))
+    fs.add_real_directory(real_project_root / "mock", read_only=True)
+    html = load_file(str(real_project_root / "mock/plain.html"))
     markdown = _parse_to_markdown(html)
 
     assert markdown is not None

@@ -22,11 +22,6 @@ def test_save_article_content_saves_html(fs: FakeFilesystem) -> None:
             - 正しいobject_keyが返される。
     """
 
-    project_root = Path(__file__).parent.parent.parent.parent
-    if not fs.exists(str(project_root)):
-        fs.create_dir(str(project_root))
-    os.chdir(project_root)
-
     base_time = datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc)
     article = Article(
         id="abc",

@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pytest
+from pyfakefs.fake_filesystem import FakeFilesystem
 
 from domain.news.rss_link.search import RssItemQuery, load_rss_links
 
@@ -28,7 +29,7 @@ assert any(
     for link in links
 ), "bbc/top のリンクが存在しません。"
 
-def test_load_rss_links_rejects_invalid_structure(tmp_path: Path) -> None:
+def test_load_rss_links_rejects_invalid_structure(fs: FakeFilesystem) -> None:
     """
     docs:
     目的: links.yml の構造が不正な場合に例外が送出されることを確認する。
@@ -36,8 +37,8 @@ def test_load_rss_links_rejects_invalid_structure(tmp_path: Path) -> None:
         - グループ配下が辞書以外のとき ValueError となる。
     """
 
-    invalid_yaml = tmp_path / "links.yml"
-    invalid_yaml.write_text("- just: text\n", encoding="utf-8")
+    invalid_yaml = Path("/tmp/links.yml")
+    fs.create_file(str(invalid_yaml), contents="- just: text\n")
 
     try:
         load_rss_links(RssItemQuery(path=str(invalid_yaml)))
@@ -45,7 +46,7 @@ def test_load_rss_links_rejects_invalid_structure(tmp_path: Path) -> None:
     except ValueError:
         pass
 
-def test_load_rss_links_filters_by_query(tmp_path: Path) -> None:
+def test_load_rss_links_filters_by_query(fs: FakeFilesystem) -> None:
     """
     docs:
     目的:
@@ -56,16 +57,16 @@ def test_load_rss_links_filters_by_query(tmp_path: Path) -> None:
         - name まで指定すると1件に絞り込まれる。
     """
 
-    yaml_path = tmp_path / "links.yml"
-    yaml_path.write_text(
-            """
+    yaml_path = Path("/tmp/links.yml")
+    fs.create_file(
+        str(yaml_path),
+        contents="""
 sample:
   headline: https://example.com/rss
   latest: https://example.com/rss-2
 other:
   daily: https://example.com/rss-3
 """.strip(),
-        encoding="utf-8",
     )
 
     group_only = load_rss_links(RssItemQuery(group="sample", path=str(yaml_path)))
