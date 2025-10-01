@@ -90,13 +90,13 @@ def convert_rss_items_to_http_requests(
     for item in channel.findall("item"):
         link = _extract_text(item, "link")
         title = _extract_text(item, "title")
-        pub_date_text = _extract_text(item, "pubDate")
+        published_at_text = _extract_text(item, "pubDate")
 
-        if not link or not title or not pub_date_text:
+        if not link or not title or not published_at_text:
             continue
 
-        pub_date = _parse_pub_date(pub_date_text)
-        if pub_date is None:
+        published_at = _parse_published_at(published_at_text)
+        if published_at is None:
             continue
 
         try:
@@ -106,7 +106,7 @@ def convert_rss_items_to_http_requests(
                     description=title,
                     group=group,
                     status_code=default_status_code,
-                    created_at=pub_date,
+                    created_at=published_at,
                 )
             )
         except (ValueError, ValidationError) as exc:
@@ -159,7 +159,7 @@ def _join_itertext(element: Element) -> str:
     return "".join(part for part in element.itertext() if part)
 
 
-def _parse_pub_date(value: str) -> datetime | None:
+def _parse_published_at(value: str) -> datetime | None:
     """RSS日付文字列をUTCのdatetimeに変換する"""
 
     try:

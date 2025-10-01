@@ -46,8 +46,8 @@ def fetch_article_content(
         url=request.url,
         content=html,
         group=request.group,
-        created_at=now,
-        updated_at=now,
+        created_at=request.created_at,  # 元のpublished_atを保持
+        updated_at=now,  # 更新日時のみ現在時刻
         description=request.description,
     )
     _log.info(
