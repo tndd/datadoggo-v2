@@ -196,7 +196,7 @@ class TestMod:
                 - titleがdescriptionとして設定される。
         """
 
-        fixture_path = Path(__file__).resolve().parents[3] / "mock" / "google_news.rss"
+        fixture_path = Path(__file__).resolve().parents[4] / "mock" / "google_news.rss"
         content = fixture_path.read_bytes()
         root = parse_rss(content)
 

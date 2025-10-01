@@ -4,8 +4,8 @@
 
 # テーブル定義
 
-## http_request
-テーブル名: `http_request`
+## http_request_queue
+テーブル名: `http_request_queue`
 ドメインモデル名: `HttpRequest`
 レコードモデル名: `HttpRequestRecord`
 
@@ -33,16 +33,17 @@
 
 ## 影響を受けるファイル
 
-### モデル・サービス層 (要修正)
-- [src/domain/news/feed/model.py](../../../src/domain/news/feed/model.py)
+### モデル・サービス層 (完了)
+- [src/domain/task_queue/http_request/model.py](../../../src/domain/task_queue/http_request/model.py)
   - `FeedItem` → `HttpRequest` にリネーム
   - `FeedRecord` → `HttpRequestRecord` にリネーム
   - `__tablename__ = "feed_item"` → `"http_request"` に変更
   - `title: str` → `description: str | None` に変更
   - `pub_date: datetime` → 削除 (created_atで代替)
   - `group: str` フィールドを追加
+  - ディレクトリ移動: `src/domain/news/feed/` → `src/domain/task_queue/http_request/`
 
-- [src/domain/news/feed/service.py](../../../src/domain/news/feed/service.py)
+- [src/domain/task_queue/http_request/service.py](../../../src/domain/task_queue/http_request/service.py)
   - `create_feed()` → `create_http_request()` にリネーム
   - 引数: `title` → `description` に変更
   - 引数: `pub_date` → 削除 (`created_at`で代替)
@@ -53,12 +54,12 @@
     - `pub_date`を`created_at`として使用
     - `title`を`description`として使用
 
-- [src/domain/news/feed/command.py](../../../src/domain/news/feed/command.py)
+- [src/domain/task_queue/http_request/command.py](../../../src/domain/task_queue/http_request/command.py)
   - `store_feed()` → `store_http_request()` にリネーム
   - 引数: `FeedItem` → `HttpRequest` に変更
   - 全テストを更新
 
-- [src/domain/news/feed/search.py](../../../src/domain/news/feed/search.py)
+- [src/domain/task_queue/http_request/search.py](../../../src/domain/task_queue/http_request/search.py)
   - `FeedQuery` → `HttpRequestQuery` にリネーム
   - クエリフィールド: `title` → `description` に変更
   - クエリフィールド: `pub_date_from`, `pub_date_to` → `created_at_from`, `created_at_to` に変更
@@ -67,7 +68,7 @@
   - `search_feeds()` → `search_http_requests()` にリネーム
   - 全テストを更新
 
-### Article関連 (互換性維持が必要)
+### Article関連 (完了)
 - [src/domain/news/article/search.py](../../../src/domain/news/article/search.py)
   - `FeedRecord` → `HttpRequestRecord` に変更
   - フィールド参照: `.title` → `.description` に変更
@@ -80,10 +81,10 @@
   - フィールド参照: `.title` → `.description` に変更
   - フィールド参照: `.pub_date` → `.created_at` に変更
 
-### ディレクトリ名変更
-- `src/domain/news/feed/` → `src/domain/news/http_request/` に変更を検討
-  - ただし、変更範囲が大きいため、当面は内部の名前変更のみで対応
-  - 将来的なリファクタリングで対応
+### ディレクトリ名変更 (完了)
+- `src/domain/news/feed/` → `src/domain/task_queue/http_request/` に移動完了
+  - HTTPリクエスト管理はニュース固有の機能ではないため、汎用的なtask_queueドメイン配下に配置
+  - インポートパスの変更に伴い、Article層も更新済み
 
 ## テストの影響
 - 全てのテストで以下を修正:
@@ -101,7 +102,7 @@
 
 各Phaseごとに実装→テスト→検証のサイクルを回し、段階的に進めます。
 
-## Phase 1: モデル層の変更 (feed/model.py)
+## Phase 1: モデル層の変更 (task_queue/http_request/model.py) ✅
 **実装内容**:
 - `FeedItem` → `HttpRequest` にリネーム
 - `FeedRecord` → `HttpRequestRecord` にリネーム
@@ -111,12 +112,13 @@
   - `pub_date: datetime` 削除
   - `group: str` 追加
 - テスト修正 (同ファイル内の `TestMod`)
+- ディレクトリ移動: `src/domain/news/feed/` → `src/domain/task_queue/http_request/`
 
-**検証**: `pytest src/domain/news/feed/model.py -v`
+**検証**: `pytest src/domain/task_queue/http_request/model.py -v` ✅
 
 ---
 
-## Phase 2: サービス層の変更 (feed/service.py)
+## Phase 2: サービス層の変更 (task_queue/http_request/service.py) ✅
 **実装内容**:
 - `create_feed()` → `create_http_request()` にリネーム
   - 引数: `title` → `description`
@@ -131,22 +133,22 @@
     - `group` パラメータ追加 (RSSソース識別用)
 - テスト修正 (同ファイル内の `TestMod` 5テスト)
 
-**検証**: `pytest src/domain/news/feed/service.py -v`
+**検証**: `pytest src/domain/task_queue/http_request/service.py -v` ✅
 
 ---
 
-## Phase 3: コマンド層の変更 (feed/command.py)
+## Phase 3: コマンド層の変更 (task_queue/http_request/command.py) ✅
 **実装内容**:
 - `store_feed()` → `store_http_request()` にリネーム
 - 引数: `FeedItem` → `HttpRequest`
 - インポート修正
 - テスト修正 (同ファイル内の `TestMod` 1テスト)
 
-**検証**: `pytest src/domain/news/feed/command.py -v`
+**検証**: `pytest src/domain/task_queue/http_request/command.py -v` ✅
 
 ---
 
-## Phase 4: 検索層の変更 (feed/search.py)
+## Phase 4: 検索層の変更 (task_queue/http_request/search.py) ✅
 **実装内容**:
 - `FeedQuery` → `HttpRequestQuery` にリネーム
   - フィールド: `title` → `description`
@@ -156,35 +158,37 @@
 - `search_feeds()` → `search_http_requests()` にリネーム
 - テスト修正 (同ファイル内の `TestMod` 3テスト)
 
-**検証**: `pytest src/domain/news/feed/search.py -v`
+**検証**: `pytest src/domain/task_queue/http_request/search.py -v` ✅
 
 ---
 
-## Phase 5: Article検索層の修正 (article/search.py)
+## Phase 5: Article検索層の修正 (article/search.py) ✅
 **実装内容**:
 - インポート: `FeedRecord` → `HttpRequestRecord`
+- インポートパス: `src.domain.news.feed` → `src.domain.task_queue.http_request`
 - フィールド参照:
   - `.title` → `.description` (38, 88行目)
   - `.pub_date` → `.created_at` (39, 89行目)
 - テスト修正 (同ファイル内の `TestMod` 5テスト)
 
-**検証**: `pytest src/domain/news/article/search.py -v`
+**検証**: `pytest src/domain/news/article/search.py -v` ✅
 
 ---
 
-## Phase 6: Article取得層の修正 (article/fetch.py)
+## Phase 6: Article取得層の修正 (article/fetch.py) ✅
 **実装内容**:
 - インポート: `FeedItem` → `HttpRequest`
+- インポートパス: `src.domain.news.feed` → `src.domain.task_queue.http_request`
 - フィールド参照:
   - `.title` → `.description` (45行目)
   - `.pub_date` → `.created_at` (46行目)
 - テスト修正 (同ファイル内の `TestMod` 2テスト)
 
-**検証**: `pytest src/domain/news/article/fetch.py -v`
+**検証**: `pytest src/domain/news/article/fetch.py -v` ✅
 
 ---
 
-## Phase 7: 統合テスト
+## Phase 7: 統合テスト ✅
 **実装内容**:
 - 全テスト実行
 - ruff check
@@ -196,13 +200,15 @@ pytest src/domain/news/ -v
 ruff check src/
 pyright src/
 ```
+**結果**: 全テストパス、Lint/型チェックも問題なし ✅
 
 ---
 
-## Phase 8: ドキュメント更新
+## Phase 8: ドキュメント更新 ✅
 **実装内容**:
 - AGENTS.md に変更内容を反映
-- 変更されたAPI、モデル名、テーブル名を記録
+- 変更されたAPI、モデル名、テーブル名、ディレクトリ構造を記録
+- issue doc 007 の実装状況を更新
 
 ---
 

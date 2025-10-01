@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
 from infra.logging import get_logger
-from src.domain.request_queue.model import HttpRequest
+from src.domain.task_queue.http_request.model import HttpRequest
 
 from .model import Article
 

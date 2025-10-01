@@ -6,7 +6,7 @@ from sqlmodel import Session, col, select
 
 from domain.common import ensure_http_url
 from infra.storage.bucket import load_object, load_objects
-from src.domain.request_queue.model import HttpRequestRecord
+from src.domain.task_queue.http_request.model import HttpRequestRecord
 
 from .model import Article
 
@@ -112,7 +112,7 @@ class TestMod:
         from pydantic import HttpUrl
 
         from infra.storage.rds import session_scope
-        from src.domain.request_queue.model import HttpRequestRecord
+        from src.domain.task_queue.http_request.model import HttpRequestRecord
 
         from .command import save_article_content
 
@@ -173,7 +173,7 @@ class TestMod:
         from pathlib import Path
 
         from infra.storage.rds import session_scope
-        from src.domain.request_queue.model import HttpRequestRecord
+        from src.domain.task_queue.http_request.model import HttpRequestRecord
 
         project_root = Path(__file__).resolve().parents[4]
         if not fs.exists(str(project_root)):
@@ -228,7 +228,7 @@ class TestMod:
         from pydantic import HttpUrl
 
         from infra.storage.rds import session_scope
-        from src.domain.request_queue.model import HttpRequestRecord
+        from src.domain.task_queue.http_request.model import HttpRequestRecord
 
         from .command import save_article_content
 
@@ -308,7 +308,7 @@ class TestMod:
         from pydantic import HttpUrl
 
         from infra.storage.rds import session_scope
-        from src.domain.request_queue.model import HttpRequestRecord
+        from src.domain.task_queue.http_request.model import HttpRequestRecord
 
         from .command import save_article_content
 

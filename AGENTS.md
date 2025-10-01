@@ -42,6 +42,8 @@ Python は4スペースインデント、型ヒント必須、テキストコメ
 ## データベース更新時の注意
 - **テーブル名変更**: `feed_item` → `http_request` に変更。
 - **モデル名変更**: `FeedItem` → `HttpRequest`, `FeedRecord` → `HttpRequestRecord` に変更。
+- **ディレクトリ構造変更**: `src/domain/news/feed/` → `src/domain/task_queue/http_request/` に移動。
+  - HTTPリクエスト管理はニュース固有ではないため、汎用的なtask_queue配下に配置。
 - **フィールド変更**:
   - `title` → `description` (nullable)
   - `pub_date` 削除 → `created_at` で代替（RSSのpubDateはcreated_atとして保存）
