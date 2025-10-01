@@ -1,4 +1,4 @@
-"""Feed向け共通サービスユーティリティ"""
+"""HttpRequest向け共通サービスユーティリティ"""
 
 from __future__ import annotations
 

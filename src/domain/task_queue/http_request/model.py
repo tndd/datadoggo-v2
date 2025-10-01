@@ -1,4 +1,4 @@
-"""Feedドメインモデル群"""
+"""HttpRequestドメインモデル群"""
 
 from __future__ import annotations
 

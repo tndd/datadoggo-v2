@@ -1,4 +1,4 @@
-"""Feedテーブルへの書き込み処理(CQRSのコマンド側)"""
+"""HttpRequestテーブルへの書き込み処理(CQRSのコマンド側)"""
 
 from __future__ import annotations
 

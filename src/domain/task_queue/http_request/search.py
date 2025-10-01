@@ -1,4 +1,4 @@
-"""Feedテーブルからの読み出し処理(CQRSのクエリ側)"""
+"""HttpRequestテーブルからの読み出し処理(CQRSのクエリ側)"""
 
 from __future__ import annotations
 
