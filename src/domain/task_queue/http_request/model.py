@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, ClassVar
 
 from pydantic import BaseModel, HttpUrl
 from sqlmodel import Field as SQLField
@@ -35,7 +34,7 @@ class HttpRequest(BaseModel):
 class HttpRequestRecord(SQLModel, table=True):
     """SQLModelによるHttpRequestテーブル定義"""
 
-    __tablename__: ClassVar[Any] = "http_request_queue"
+    __tablename__: str = "http_request_queue"  # pyright: ignore[reportIncompatibleVariableOverride]
 
     id: str = SQLField(primary_key=True, index=True)
     url: str = SQLField(nullable=False)
@@ -64,13 +63,11 @@ class TestMod:
 
         from datetime import datetime, timezone
 
-        base_time = datetime(2025, 9, 29, 0, 0, tzinfo=timezone.utc)
-
-        from typing import cast
-
         from pydantic import HttpUrl
 
-        url_value = cast(HttpUrl, "https://example.com/rss")
+        base_time = datetime(2025, 9, 29, 0, 0, tzinfo=timezone.utc)
+
+        url_value = HttpUrl("https://example.com/rss")
 
         # status_code=200 の場合
         success = HttpRequest(
