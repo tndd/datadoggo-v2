@@ -56,11 +56,11 @@ class TestMod:
         article = Article(
             id="abc",
             url=cast(HttpUrl, "https://example.com/article"),
-            description="サンプル",
-            pub_date=base_time,
             content="<html>body</html>",
+            group="test:command",
             created_at=base_time,
             updated_at=base_time,
+            description="サンプル",
         )
 
         saved_key = save_article_content(article)
@@ -86,11 +86,11 @@ class TestMod:
         article = Article(
             id="xyz",
             url=cast(HttpUrl, "https://example.com/failure"),
-            description="失敗",
-            pub_date=base_time,
             content="<html>failure</html>",
+            group="test:failure",
             created_at=base_time,
             updated_at=base_time,
+            description="失敗",
         )
 
         import sys

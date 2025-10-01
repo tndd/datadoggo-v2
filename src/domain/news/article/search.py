@@ -35,11 +35,11 @@ def find_article_by_id(session: Session, feed_id: str) -> Article | None:
     return Article(
         id=feed_record.id,
         url=ensure_http_url(feed_record.url),
-        description=feed_record.description,
-        pub_date=feed_record.created_at,
         content=html_content,
+        group=feed_record.group,
         created_at=feed_record.created_at,
         updated_at=feed_record.updated_at,
+        description=feed_record.description,
     )
 
 
@@ -87,11 +87,11 @@ def search_articles_by_ids(
         results[feed_id] = Article(
             id=record.id,
             url=ensure_http_url(record.url),
-            description=record.description,
-            pub_date=record.created_at,
             content=html_content,
+            group=record.group,
             created_at=record.created_at,
             updated_at=record.updated_at,
+            description=record.description,
         )
 
     return results
@@ -152,11 +152,11 @@ class TestMod:
             article = Article(
                 id="article_test",
                 url=cast(HttpUrl, "https://example.com/article"),
-                description="記事",
-                pub_date=feed_time,
                 content="<html>article</html>",
+                group="test:article",
                 created_at=feed_time,
                 updated_at=feed_time,
+                description="記事",
             )
             save_article_content(article)
 
@@ -274,11 +274,11 @@ class TestMod:
                 article = Article(
                     id=f"article_{i}",
                     url=cast(HttpUrl, f"https://example.com/article/{i}"),
-                    description=f"記事{i}",
-                    pub_date=feed_time,
                     content=f"<html>article{i}</html>",
+                    group=f"test:article{i}",
                     created_at=feed_time,
                     updated_at=feed_time,
+                    description=f"記事{i}",
                 )
                 save_article_content(article)
 
@@ -377,11 +377,11 @@ class TestMod:
             article = Article(
                 id="success",
                 url=cast(HttpUrl, "https://example.com/success"),
-                description="成功",
-                pub_date=feed_time,
                 content="<html>success</html>",
+                group="test:success",
                 created_at=feed_time,
                 updated_at=feed_time,
+                description="成功",
             )
             save_article_content(article)
 

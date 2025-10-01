@@ -44,11 +44,11 @@ def fetch_article_content(
     article = Article(
         id=request.id,
         url=request.url,
-        description=request.description,
-        pub_date=request.created_at,
         content=html,
+        group=request.group,
         created_at=now,
         updated_at=now,
+        description=request.description,
     )
     _log.info(
         "記事HTMLの取得に成功しました",

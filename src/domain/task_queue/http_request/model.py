@@ -18,7 +18,7 @@ class HttpRequest(BaseModel):
     id: str
     url: HttpUrl
     description: str | None
-    group: str
+    group: str | None
     status_code: int | None = None
     created_at: datetime
     updated_at: datetime
@@ -40,7 +40,7 @@ class HttpRequestRecord(SQLModel, table=True):
     id: str = SQLField(primary_key=True, index=True)
     url: str = SQLField(nullable=False)
     description: str | None = SQLField(default=None, nullable=True)
-    group: str = SQLField(nullable=False)
+    group: str | None = SQLField(default=None, nullable=True)
     status_code: int | None = SQLField(default=None, nullable=True)
     created_at: datetime = SQLField(nullable=False)
     updated_at: datetime = SQLField(nullable=False)
@@ -59,6 +59,7 @@ class TestMod:
                 - 200 以外または None の場合 is_backlog が True、
                   is_success が False。
                 - is_success と is_backlog が相互排他的。
+                - group が nullable であることを確認する。
         """
 
         from datetime import datetime, timezone
@@ -93,3 +94,15 @@ class TestMod:
         backlog_error = success.model_copy(update={"status_code": 404})
         assert backlog_error.is_backlog()
         assert not backlog_error.is_success()
+
+        # group が None でも生成可能
+        no_group = HttpRequest(
+            id="xyz",
+            url=url_value,
+            description="no group",
+            group=None,
+            status_code=SUCCESS_STATUS_CODE,
+            created_at=base_time,
+            updated_at=base_time,
+        )
+        assert no_group.group is None

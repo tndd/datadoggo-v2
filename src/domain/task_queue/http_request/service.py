@@ -27,7 +27,7 @@ def create_http_request(
     *,
     url: str,
     description: str | None,
-    group: str,
+    group: str | None,
     status_code: int | None,
     created_at: datetime | None = None,
 ) -> HttpRequest:
@@ -79,7 +79,7 @@ def record_to_http_request(record: HttpRequestRecord) -> HttpRequest:
 def convert_rss_items_to_http_requests(
     root: Element,
     *,
-    group: str,
+    group: str | None,
     default_status_code: int | None = DEFAULT_FEED_STATUS_CODE,
 ) -> list[HttpRequest]:
     """RSSのitem要素をHttpRequestリストに変換する"""
