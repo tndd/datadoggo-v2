@@ -18,6 +18,8 @@
 | description | text?      | 記事の説明。記事のタイトルや注釈など               |
 | group       | text?      | グループ名                                         |
 
+# yaml
+
 ## rss_link
 
 ### RssItem
