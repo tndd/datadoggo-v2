@@ -6,16 +6,19 @@ import json
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 from xml.etree import ElementTree as ET
 from xml.etree.ElementTree import Element
 
 import pytest
 from pydantic import ValidationError
 
-from domain.task_queue.http_request.model import HttpRequestTask
 from domain.task_queue.http_request.service import create_http_request
 from infra.logging import get_logger
 from infra.parse import parse_rss
+
+if TYPE_CHECKING:
+    from domain.task_queue.http_request.model import HttpRequestTask
 
 DEFAULT_HTTP_REQUEST_STATUS_CODE = None
 _log = get_logger()

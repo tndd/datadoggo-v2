@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
-from domain.task_queue.http_request.model import HttpRequestTask
+from typing import TYPE_CHECKING
+
 from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
 
 from .fetch import fetch_rss_from_links
 from .search import RssItemQuery, load_rss_links
 from .service import convert_rss_element_to_http_requests
+
+if TYPE_CHECKING:
+    from domain.task_queue.http_request.model import HttpRequestTask
 
 
 def fetch_http_requests_from_query(
