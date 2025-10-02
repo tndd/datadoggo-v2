@@ -7,12 +7,12 @@ from pathlib import Path
 
 from pyfakefs.fake_filesystem import FakeFilesystem
 
+from infra.app_log import get_logger
 from infra.compression import compress_text_to_zstd, decompress_zstd_to_text
 from infra.compute import (
     DEFAULT_MAX_STORAGE_KEY_LENGTH,
     sanitize_storage_key,
 )
-from infra.logging import get_logger
 from infra.naming import generate_timestamp
 from infra.storage.file import load_bytes, save_bytes_to_file
 

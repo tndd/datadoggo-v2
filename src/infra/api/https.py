@@ -12,7 +12,7 @@ from urllib.request import Request, urlopen
 import pytest
 from pydantic import BaseModel, ConfigDict
 
-from infra.logging import get_logger
+from infra.app_log import get_logger
 
 DEFAULT_TIMEOUT = 10.0
 DEFAULT_ENCODING = "utf-8"

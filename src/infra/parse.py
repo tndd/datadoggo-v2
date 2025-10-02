@@ -10,7 +10,7 @@ from xml.etree.ElementTree import Element
 
 import pytest
 
-from infra.logging import get_logger
+from infra.app_log import get_logger
 
 RSS_INPUT = Union[str, bytes, bytearray]
 _AMPERSAND_PATTERN = re.compile(r"&(?!(?:amp|lt|gt|quot|apos|#[0-9]+|#x[0-9A-Fa-f]+);)")

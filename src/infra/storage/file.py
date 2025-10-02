@@ -5,7 +5,7 @@ from pathlib import Path
 from types import FrameType
 from typing import Optional, Union
 
-from infra.logging import get_logger
+from infra.app_log import get_logger
 from infra.naming import generate_timestamped_filename
 
 PathLike = Union[str, Path]

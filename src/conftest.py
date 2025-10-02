@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from pyfakefs.fake_filesystem import FakeFilesystem
 
-from infra.logging import configure_logging, reset_logging
+from infra.app_log import configure_logging, reset_logging
 
 
 @pytest.fixture

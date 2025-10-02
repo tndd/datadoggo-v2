@@ -9,7 +9,7 @@ from typing import Iterator
 from sqlalchemy.engine import Engine, make_url
 from sqlmodel import Session, SQLModel, create_engine
 
-from infra.logging import get_logger
+from infra.app_log import get_logger
 
 DEFAULT_DATABASE_URL = "sqlite:///data/datadoggo.db"
 

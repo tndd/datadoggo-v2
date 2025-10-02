@@ -14,7 +14,7 @@ import pytest
 from pydantic import ValidationError
 
 from domain.task_queue.http_request.service import create_http_request
-from infra.logging import get_logger
+from infra.app_log import get_logger
 from infra.parse import parse_rss
 
 if TYPE_CHECKING:
