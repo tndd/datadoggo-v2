@@ -8,6 +8,7 @@ from xml.etree.ElementTree import Element
 import pytest
 
 from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
+from infra.compute import normalize_parallel
 from infra.parse import parse_rss
 
 from .model import RssItem
@@ -36,7 +37,7 @@ def fetch_rss_from_links(
     if not items:
         return []
 
-    worker_count = _normalize_parallel(parallel, len(items))
+    worker_count = normalize_parallel(parallel, len(items))
     if worker_count <= 1:
         return [fetch_rss_element(item.url, client=client) for item in items]
 
@@ -62,23 +63,6 @@ def fetch_rss_from_links(
             results[index] = future.result()
 
     return [element for element in results if element is not None]
-
-
-def _normalize_parallel(parallel: bool | int, item_count: int) -> int:
-    """並列実行時のワーカー数を決定する"""
-
-    if not parallel:
-        return 1
-
-    if parallel is True:
-        return max(1, item_count)
-
-    if isinstance(parallel, int):
-        if parallel <= 1:
-            return 1
-        return min(parallel, item_count)
-
-    return 1
 
 
 class TestMod:

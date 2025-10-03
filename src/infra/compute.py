@@ -42,6 +42,23 @@ def hash_text_sha256(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+def normalize_parallel(parallel: bool | int, item_count: int) -> int:
+    """並列実行時のワーカー数を決定する"""
+
+    if not parallel:
+        return 1
+
+    if parallel is True:
+        return max(1, item_count)
+
+    if isinstance(parallel, int):
+        if parallel <= 1:
+            return 1
+        return min(parallel, item_count)
+
+    return 1
+
+
 class TestMod:
     def test_is_safe_storage_key(self) -> None:
         """

@@ -11,6 +11,7 @@ from infra.app_log import get_logger
 from infra.compression import compress_text_to_zstd, decompress_zstd_to_text
 from infra.compute import (
     DEFAULT_MAX_STORAGE_KEY_LENGTH,
+    normalize_parallel,
     sanitize_storage_key,
 )
 from infra.naming import generate_timestamp
@@ -174,23 +175,6 @@ def _build_object_path(
     return root / bucket_name / shard / file_name
 
 
-def _normalize_parallel(parallel: bool | int, item_count: int) -> int:
-    """並列実行時のワーカー数を決定する"""
-
-    if not parallel:
-        return 1
-
-    if parallel is True:
-        return max(1, item_count)
-
-    if isinstance(parallel, int):
-        if parallel <= 1:
-            return 1
-        return min(parallel, item_count)
-
-    return 1
-
-
 def load_objects(
     bucket_name: str,
     object_keys: list[str],
@@ -203,7 +187,7 @@ def load_objects(
     if not object_keys:
         return {}
 
-    worker_count = _normalize_parallel(parallel, len(object_keys))
+    worker_count = normalize_parallel(parallel, len(object_keys))
 
     # 逐次実行
     if worker_count <= 1:

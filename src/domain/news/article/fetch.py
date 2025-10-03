@@ -45,7 +45,8 @@ def fetch_article_content(
 
     from datetime import datetime, timezone
 
-    html = _decode_body(response)
+    encoding = response.encoding or "utf-8"
+    html = response.body.decode(encoding)
     now = datetime.now(timezone.utc)
     article = Article(
         id=request.id,
@@ -63,13 +64,6 @@ def fetch_article_content(
         bytes=len(response.body),
     )
     return article
-
-
-def _decode_body(response: HttpResponse) -> str:
-    """HTTPレスポンスボディをテキスト化する"""
-
-    encoding = response.encoding or "utf-8"
-    return response.body.decode(encoding)
 
 
 class TestMod:

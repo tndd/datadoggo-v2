@@ -82,7 +82,6 @@ from __future__ import annotations
 import inspect
 import logging
 import sys
-from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -187,7 +186,7 @@ def _resolve_caller_component() -> str:
         return "unknown"
 
     try:
-        fallback = _normalize_module_name(__name__)
+        fallback = __name__
         skip_names = {fallback}
         if fallback.startswith("src."):
             skip_names.add(fallback.removeprefix("src."))
@@ -201,10 +200,8 @@ def _resolve_caller_component() -> str:
         while candidate is not None and depth < max_depth:
             module = inspect.getmodule(candidate)
             module_name = getattr(module, "__name__", "") if module else ""
-            if module_name:
-                normalized = _normalize_module_name(module_name)
-                if normalized not in skip_names:
-                    return normalized
+            if module_name and module_name not in skip_names:
+                return module_name
 
             candidate = candidate.f_back
             depth += 1
@@ -212,13 +209,6 @@ def _resolve_caller_component() -> str:
         return fallback
     finally:
         del frame
-
-
-@lru_cache(maxsize=256)
-def _normalize_module_name(name: str) -> str:
-    if name.startswith("src."):
-        return name
-    return name
 
 
 def _derive_label(component: str) -> str:

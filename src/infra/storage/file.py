@@ -144,18 +144,12 @@ def _resolve_path(path: str, *, _stack_skip: int = 2) -> Path:
         base_dir = caller_file.parent
         return (base_dir / Path(path)).resolve()
 
-    project_root = _find_project_root()
-    return (project_root / Path(path)).resolve()
-
-
-def _find_project_root() -> Path:
-    """プロジェクトルートを探索する"""
-
     current = Path(__file__).resolve()
     for parent in current.parents:
         if (parent / "pyproject.toml").exists():
-            return parent
-    return current.parent
+            project_root = parent
+            return (project_root / Path(path)).resolve()
+    return (current.parent / Path(path)).resolve()
 
 
 class TestMod:

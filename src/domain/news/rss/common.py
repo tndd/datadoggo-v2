@@ -74,7 +74,7 @@ def convert_rss_element_to_http_requests(
 def _extract_channel(root: Element) -> Element:
     """RSSルートまたはchannel要素を返す"""
 
-    local_name = _local_name(root.tag)
+    local_name = root.tag.split("}", 1)[1] if "}" in root.tag else root.tag
     if local_name == "rss":
         channel = root.find("channel")
         if channel is None:
@@ -94,17 +94,11 @@ def _extract_text(parent: Element, tag: str) -> str | None:
     if child is None:
         return None
 
-    text = _join_itertext(child)
+    text = "".join(part for part in child.itertext() if part)
     stripped = text.strip()
     if not stripped:
         return None
     return stripped
-
-
-def _join_itertext(element: Element) -> str:
-    """要素内のテキストノードを結合する"""
-
-    return "".join(part for part in element.itertext() if part)
 
 
 def _parse_published_at(value: str) -> datetime | None:
@@ -122,14 +116,6 @@ def _parse_published_at(value: str) -> datetime | None:
         return parsed.replace(tzinfo=timezone.utc)
 
     return parsed.astimezone(timezone.utc)
-
-
-def _local_name(tag: str) -> str:
-    """名前空間付きタグからローカル名のみを返す"""
-
-    if "}" in tag:
-        return tag.split("}", 1)[1]
-    return tag
 
 
 class TestMod:

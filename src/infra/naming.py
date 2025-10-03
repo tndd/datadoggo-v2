@@ -58,16 +58,13 @@ def _compose_timestamped_name(
         parts = [timestamp]
 
     base_name = separator.join(parts)
-    normalized_extension = _normalize_extension(extension)
-    return f"{base_name}{normalized_extension}"
-
-
-def _normalize_extension(extension: str | None) -> str:
-    """拡張子をプレフィックス付きの形式に整形する"""
-
     if not extension:
-        return ""
-    return extension if extension.startswith(".") else f".{extension}"
+        normalized_extension = ""
+    elif extension.startswith("."):
+        normalized_extension = extension
+    else:
+        normalized_extension = f".{extension}"
+    return f"{base_name}{normalized_extension}"
 
 
 class TestMod:
