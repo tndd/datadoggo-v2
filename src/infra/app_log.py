@@ -12,7 +12,7 @@ loguruをベースに、以下の機能を提供する。
    アプリケーションの起動時に一度だけ呼び出す。
 
    ```python
-   from infra.logging import configure_logging
+   from infra.app_log import configure_logging
 
    def main():
        configure_logging()
@@ -23,7 +23,7 @@ loguruをベースに、以下の機能を提供する。
    各モジュールで `get_logger()` を呼び出してロガーを取得し、メッセージを記録する。
 
    ```python
-   from infra.logging import get_logger
+   from infra.app_log import get_logger
 
    LOG = get_logger()
 
@@ -271,7 +271,7 @@ class TestMod:
 
         try:
             exec(
-                "from infra.logging import get_logger\nPROBE_LOGGER = get_logger()",
+                "from infra.app_log import get_logger\nPROBE_LOGGER = get_logger()",
                 module.__dict__,
             )
             logger_with_extra = cast(Any, module.__dict__["PROBE_LOGGER"])

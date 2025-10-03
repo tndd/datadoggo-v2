@@ -5,8 +5,8 @@ from __future__ import annotations
 from sqlmodel import Session, col, select
 
 from domain.common import ensure_http_url
+from domain.task_queue.http_request.model import HttpRequestTaskRecord
 from infra.storage.bucket import load_object, load_objects
-from src.domain.task_queue.http_request.model import HttpRequestTaskRecord
 
 from .model import Article
 
@@ -121,8 +121,8 @@ class TestMod:
 
         from pydantic import HttpUrl
 
+        from domain.task_queue.http_request.model import HttpRequestTaskRecord
         from infra.storage.rds import session_scope
-        from src.domain.task_queue.http_request.model import HttpRequestTaskRecord
 
         from .command import save_article_content
 
@@ -184,8 +184,8 @@ class TestMod:
         from datetime import datetime, timezone
         from pathlib import Path
 
+        from domain.task_queue.http_request.model import HttpRequestTaskRecord
         from infra.storage.rds import session_scope
-        from src.domain.task_queue.http_request.model import HttpRequestTaskRecord
 
         project_root = Path(__file__).resolve().parents[4]
         if not fs.exists(str(project_root)):
@@ -239,8 +239,8 @@ class TestMod:
 
         from pydantic import HttpUrl
 
+        from domain.task_queue.http_request.model import HttpRequestTaskRecord
         from infra.storage.rds import session_scope
-        from src.domain.task_queue.http_request.model import HttpRequestTaskRecord
 
         from .command import save_article_content
 
@@ -321,8 +321,8 @@ class TestMod:
 
         from pydantic import HttpUrl
 
+        from domain.task_queue.http_request.model import HttpRequestTaskRecord
         from infra.storage.rds import session_scope
-        from src.domain.task_queue.http_request.model import HttpRequestTaskRecord
 
         from .command import save_article_content
 

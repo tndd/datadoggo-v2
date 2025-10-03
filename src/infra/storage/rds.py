@@ -9,7 +9,7 @@ from typing import Iterator
 from sqlalchemy.engine import Engine, make_url
 from sqlmodel import Session, SQLModel, create_engine
 
-from infra.logging import get_logger
+from infra.app_log import get_logger
 
 DEFAULT_DATABASE_URL = "sqlite:///data/datadoggo.db"
 
@@ -97,6 +97,13 @@ def initialize_database(engine: Engine | None = None) -> None:
 
     target_engine = engine or create_sqlite_engine()
     SQLModel.metadata.create_all(target_engine)
+
+
+def reset_test_engine() -> None:
+    """テスト用エンジンキャッシュをクリアする（テスト分離用）"""
+
+    global _test_engine  # noqa: PLW0603
+    _test_engine = None
 
 
 def _ensure_sqlite_directory(database_url: str) -> None:

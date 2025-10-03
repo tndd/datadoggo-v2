@@ -27,7 +27,7 @@
    - `logger = loguru.logger` を初期化し、上記設定（ファイルパス、ローテーション、保持、シリアライズ、バックトレース有効化、UTCタイムスタンプ）を適用。
    - `logging.getLogger`互換で必要に応じて標準ログへブリッジするHandlerも用意（今後標準ライブラリを併用する場面に備え、`InterceptHandler`を実装）。
 3. **変換処理での利用**
-   - `feed/service.py` 冒頭で `from infra.logging import logger` をインポート。
+   - `feed/service.py` 冒頭で `from infra.app_log import logger` をインポート。
    - 例外捕捉ブロックで `logger.warning("invalid feed item", bucket_id=bucket_id, feed_url=link, error_type=type(exc).__name__, exception_message=str(exc))` を呼び出し。
    - 想定外例外（チャンネル欠損など）向けに、上位層からも同loggerを利用できるよう公開APIとする。
 4. **テスト追加**

@@ -10,4 +10,4 @@ check:
 	uv run pyright
 
 test: check
-	uv run pytest
+	uv run pytest --rootdir=src

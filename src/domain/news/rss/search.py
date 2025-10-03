@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from yaml import YAMLError, safe_load
 
-from src.infra.storage.file import load_file
+from infra.storage.file import load_file
 
 from .model import RssItem, RssItemQuery
 
