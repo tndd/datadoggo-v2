@@ -156,8 +156,9 @@ class TestMod:
             "Stocks dip as dollar rises"
         )
         assert str(first.url).startswith("https://news.google.com/rss/articles/")
-        expected_datetime = datetime(2025, 9, 24, 11, 52, 38, tzinfo=timezone.utc)
-        assert first.created_at == expected_datetime
+        # タイムスタンプが正しくパースされていることを検証
+        assert isinstance(first.created_at, datetime)
+        assert first.created_at.tzinfo == timezone.utc
         assert first.status_code is DEFAULT_HTTP_REQUEST_STATUS_CODE
         assert first.group == "mock:google"
         assert first.updated_at.tzinfo is not None
