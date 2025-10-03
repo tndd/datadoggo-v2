@@ -23,12 +23,10 @@ def app_logging(fs: FakeFilesystem):
 @pytest.fixture(autouse=True)
 def initialize_test_db():
     """各テスト実行前に自動的にDBを初期化"""
-    import infra.storage.rds
-    from infra.storage.rds import initialize_database
+    from infra.storage.rds import initialize_database, reset_test_engine
 
     # テスト開始前にエンジンキャッシュをクリア
-    if hasattr(infra.storage.rds, "_test_engine"):
-        infra.storage.rds._test_engine = None
+    reset_test_engine()
 
     # DBを初期化（新しいエンジンでテーブル作成）
     initialize_database()

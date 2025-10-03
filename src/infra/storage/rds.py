@@ -99,6 +99,13 @@ def initialize_database(engine: Engine | None = None) -> None:
     SQLModel.metadata.create_all(target_engine)
 
 
+def reset_test_engine() -> None:
+    """テスト用エンジンキャッシュをクリアする（テスト分離用）"""
+
+    global _test_engine  # noqa: PLW0603
+    _test_engine = None
+
+
 def _ensure_sqlite_directory(database_url: str) -> None:
     """SQLiteファイルの親ディレクトリを事前に作成する"""
 
