@@ -10,8 +10,8 @@ from sqlmodel import select
 
 from infra.storage.rds import session_scope
 
+from .common import record_to_http_request
 from .model import HttpRequestTask, HttpRequestTaskRecord
-from .service import record_to_http_request
 
 
 class HttpRequestQuery(BaseModel):
@@ -106,7 +106,7 @@ class TestMod:
         """
 
         from .command import store_http_request
-        from .service import create_http_request
+        from .common import create_http_request
 
         # pytestにより自動的にインメモリDBが使用される
         request = create_http_request(
@@ -152,7 +152,7 @@ class TestMod:
         """
 
         from .command import store_http_request
-        from .service import create_http_request
+        from .common import create_http_request
 
         # pytestにより自動的にインメモリDBが使用される
         request_success = create_http_request(
