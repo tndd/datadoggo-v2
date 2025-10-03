@@ -27,9 +27,8 @@ def fetch_http_requests_from_query(
 
     # 各ElementをHttpRequestTaskリストに変換して結合
     http_requests: list[HttpRequestTask] = []
-    for i, element in enumerate(elements):
+    for rss_item, element in zip(rss_items, elements, strict=True):
         # RssItemからgroupを取得（group:nameの形式）
-        rss_item = rss_items[i]
         group = f"{rss_item.group}:{rss_item.name}"
         http_requests.extend(convert_rss_element_to_http_requests(element, group=group))
 
