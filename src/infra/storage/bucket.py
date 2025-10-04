@@ -11,10 +11,10 @@ from infra.app_log import get_logger
 from infra.compression import compress_text_to_zstd, decompress_zstd_to_text
 from infra.compute import (
     DEFAULT_MAX_STORAGE_KEY_LENGTH,
-    normalize_parallel,
     sanitize_storage_key,
 )
 from infra.naming import generate_timestamp
+from infra.parallel import get_worker_count
 from infra.storage.file import load_bytes, save_bytes_to_file
 
 DEFAULT_STORAGE_ROOT = Path("data/bucket")
@@ -187,7 +187,7 @@ def load_objects(
     if not object_keys:
         return {}
 
-    worker_count = normalize_parallel(parallel, len(object_keys))
+    worker_count = get_worker_count(parallel)
 
     # 逐次実行
     if worker_count <= 1:
