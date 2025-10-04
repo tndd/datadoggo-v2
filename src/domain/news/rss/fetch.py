@@ -9,7 +9,7 @@ import pytest
 
 from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
 from infra.compute import normalize_parallel
-from infra.parse import parse_rss
+from infra.parse.rss import parse_rss
 
 from .model import RssItem
 
