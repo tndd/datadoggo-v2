@@ -41,14 +41,14 @@ class TestMod:
 
         import os
         from datetime import datetime, timezone
-        from pathlib import Path
         from typing import cast
 
         from pydantic import HttpUrl
 
         from infra.storage.bucket import load_object
+        from infra.storage.file import get_project_root
 
-        project_root = Path(__file__).resolve().parents[4]
+        project_root = get_project_root()
         if not fs.exists(str(project_root)):
             fs.create_dir(str(project_root))
         os.chdir(project_root)

@@ -116,17 +116,17 @@ class TestMod:
 
         import os
         from datetime import datetime, timezone
-        from pathlib import Path
         from typing import cast
 
         from pydantic import HttpUrl
 
         from domain.task_queue.http_request.model import HttpRequestTaskRecord
+        from infra.storage.file import get_project_root
         from infra.storage.rds import session_scope
 
         from .command import save_article_content
 
-        project_root = Path(__file__).resolve().parents[4]
+        project_root = get_project_root()
         if not fs.exists(str(project_root)):
             fs.create_dir(str(project_root))
         os.chdir(project_root)
@@ -182,12 +182,12 @@ class TestMod:
 
         import os
         from datetime import datetime, timezone
-        from pathlib import Path
 
         from domain.task_queue.http_request.model import HttpRequestTaskRecord
+        from infra.storage.file import get_project_root
         from infra.storage.rds import session_scope
 
-        project_root = Path(__file__).resolve().parents[4]
+        project_root = get_project_root()
         if not fs.exists(str(project_root)):
             fs.create_dir(str(project_root))
         os.chdir(project_root)
@@ -234,17 +234,17 @@ class TestMod:
 
         import os
         from datetime import datetime, timezone
-        from pathlib import Path
         from typing import cast
 
         from pydantic import HttpUrl
 
         from domain.task_queue.http_request.model import HttpRequestTaskRecord
+        from infra.storage.file import get_project_root
         from infra.storage.rds import session_scope
 
         from .command import save_article_content
 
-        project_root = Path(__file__).resolve().parents[4]
+        project_root = get_project_root()
         if not fs.exists(str(project_root)):
             fs.create_dir(str(project_root))
         os.chdir(project_root)
@@ -316,17 +316,17 @@ class TestMod:
 
         import os
         from datetime import datetime, timezone
-        from pathlib import Path
         from typing import cast
 
         from pydantic import HttpUrl
 
         from domain.task_queue.http_request.model import HttpRequestTaskRecord
+        from infra.storage.file import get_project_root
         from infra.storage.rds import session_scope
 
         from .command import save_article_content
 
-        project_root = Path(__file__).resolve().parents[4]
+        project_root = get_project_root()
         if not fs.exists(str(project_root)):
             fs.create_dir(str(project_root))
         os.chdir(project_root)
@@ -418,11 +418,11 @@ class TestMod:
         """
 
         import os
-        from pathlib import Path
 
+        from infra.storage.file import get_project_root
         from infra.storage.rds import session_scope
 
-        project_root = Path(__file__).resolve().parents[4]
+        project_root = get_project_root()
         if not fs.exists(str(project_root)):
             fs.create_dir(str(project_root))
         os.chdir(project_root)
