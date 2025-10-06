@@ -9,10 +9,6 @@ from pyfakefs.fake_filesystem import FakeFilesystem
 
 from infra.app_log import get_logger
 from infra.compression import compress_text_to_zstd, decompress_zstd_to_text
-from infra.compute import (
-    DEFAULT_MAX_STORAGE_KEY_LENGTH,
-    sanitize_storage_key,
-)
 from infra.naming import generate_timestamp
 from infra.parallel import get_worker_count
 from infra.storage.file import load_bytes, save_bytes_to_file
@@ -20,9 +16,45 @@ from infra.storage.file import load_bytes, save_bytes_to_file
 DEFAULT_STORAGE_ROOT = Path("data/bucket")
 DEFAULT_OBJECT_EXTENSION = ".zst"
 SHARD_PREFIX_LENGTH = 2
+
+# ストレージキー検証関連の定数
+SAFE_STORAGE_KEY_ALLOWED_CHARS = set(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
+)
+DEFAULT_MAX_STORAGE_KEY_LENGTH = 128
 MAX_SAFE_KEY_LENGTH = DEFAULT_MAX_STORAGE_KEY_LENGTH
+SHA256_HEX_LENGTH = 64
 
 _log = get_logger()
+
+
+def is_safe_storage_key(
+    value: str,
+    *,
+    max_length: int = DEFAULT_MAX_STORAGE_KEY_LENGTH,
+) -> bool:
+    """ファイルシステムで安全に扱えるキーかを判定する"""
+
+    if not value or len(value) > max_length:
+        return False
+
+    return all(char in SAFE_STORAGE_KEY_ALLOWED_CHARS for char in value)
+
+
+def sanitize_storage_key(
+    value: str,
+    *,
+    max_length: int = DEFAULT_MAX_STORAGE_KEY_LENGTH,
+) -> str:
+    """ストレージキーを安全な形式に正規化する"""
+
+    import hashlib
+
+    normalized = value.strip()
+    if is_safe_storage_key(normalized, max_length=max_length):
+        return normalized
+
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
 def save_object(
@@ -222,6 +254,33 @@ def load_objects(
 
 
 class TestMod:
+    def test_is_safe_storage_key(self) -> None:
+        """
+        docs:
+            目的: is_safe_storage_key の判定ロジックを確認する。
+            検証観点:
+                - 許可文字のみかつ長さ内のキーがTrueになる。
+                - 禁止文字や長過ぎるキーはFalseになる。
+        """
+
+        assert is_safe_storage_key("abc-123")
+        assert not is_safe_storage_key("abc/123")
+        assert not is_safe_storage_key("", max_length=5)
+        assert not is_safe_storage_key("a" * (DEFAULT_MAX_STORAGE_KEY_LENGTH + 1))
+
+    def test_sanitize_storage_key(self) -> None:
+        """
+        docs:
+            目的: sanitize_storage_key の正規化挙動を確認する。
+            検証観点:
+                - 安全なキーは入力をそのまま返す。
+                - 危険なキーはハッシュ化された値を返す。
+        """
+
+        assert sanitize_storage_key(" safe_key ") == "safe_key"
+        hashed = sanitize_storage_key("https://example.com/path?id=1")
+        assert len(hashed) == SHA256_HEX_LENGTH
+
     def test_save_and_load_text(self, fs: FakeFilesystem) -> None:
         """
         docs:
