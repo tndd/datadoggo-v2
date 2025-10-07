@@ -25,7 +25,7 @@ where = ["src"]  # `uv pip install -e .`
 [dependency-groups]
 dev = [
     "pyfakefs>=5.9.3",
-    "pyright>=1.1.405",
+    "pyright>=1.1.406",
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
     "pytest-cov>=7.0.0",
