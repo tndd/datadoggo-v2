@@ -6,7 +6,7 @@ from types import FrameType
 from typing import Optional, Union
 
 from infra.app_log import get_logger
-from infra.naming import generate_timestamped_filename
+from infra.generate import generate_timestamped_filename
 
 PathLike = Union[str, Path]
 
@@ -121,6 +121,16 @@ def _resolve_any_path(path: PathLike) -> Path:
     return _resolve_path(path, _stack_skip=3)
 
 
+def get_project_root() -> Path:
+    """プロジェクトルートディレクトリを取得する"""
+
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        if (parent / "pyproject.toml").exists():
+            return parent
+    return current.parent
+
+
 def _resolve_path(path: str, *, _stack_skip: int = 2) -> Path:
     """読み込み対象のパスを解決する"""
 
@@ -144,12 +154,8 @@ def _resolve_path(path: str, *, _stack_skip: int = 2) -> Path:
         base_dir = caller_file.parent
         return (base_dir / Path(path)).resolve()
 
-    current = Path(__file__).resolve()
-    for parent in current.parents:
-        if (parent / "pyproject.toml").exists():
-            project_root = parent
-            return (project_root / Path(path)).resolve()
-    return (current.parent / Path(path)).resolve()
+    project_root = get_project_root()
+    return (project_root / Path(path)).resolve()
 
 
 class TestMod:

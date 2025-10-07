@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
 from typing import Union
 from xml.etree import ElementTree as ET
 from xml.etree.ElementTree import Element
@@ -11,6 +10,7 @@ from xml.etree.ElementTree import Element
 import pytest
 
 from infra.app_log import get_logger
+from infra.storage.file import load_bytes
 
 RSS_INPUT = Union[str, bytes, bytearray]
 _AMPERSAND_PATTERN = re.compile(r"&(?!(?:amp|lt|gt|quot|apos|#[0-9]+|#x[0-9A-Fa-f]+);)")
@@ -84,8 +84,7 @@ class TestMod:
                 - channel 要素が存在すること。
         """
 
-        fixture_path = Path(__file__).resolve().parents[2] / "mock" / "google_news.rss"
-        content = fixture_path.read_bytes()
+        content = load_bytes("mock/google_news.rss")
 
         root = parse_rss(content)
 

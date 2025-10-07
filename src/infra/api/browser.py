@@ -1,4 +1,7 @@
-"""ブラウザからコンテンツを取得する"""
+"""
+pydollを使ったコンテンツ取得
+動的サイトやbot対策がなされたサイトに対して使う
+"""
 
 import asyncio
 import os
@@ -10,6 +13,8 @@ from pydoll.browser.options import ChromiumOptions
 from infra.app_log import get_logger
 
 LOG = get_logger()
+
+# TODO: 戻り値のクラスの形は再考が必要
 
 
 class PageContent(BaseModel):

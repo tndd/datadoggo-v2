@@ -1,39 +1,55 @@
-"""キー検証/ハッシュ計算ユーティリティ"""
+"""データ変換ユーティリティ (圧縮/ハッシュ)"""
 
 import hashlib
 
-SAFE_STORAGE_KEY_ALLOWED_CHARS = set(
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
-)
-DEFAULT_MAX_STORAGE_KEY_LENGTH = 128
+import zstandard as zstd
+
 SHA256_HEX_LENGTH = 64
 
 
-def is_safe_storage_key(
-    value: str,
+# ==================== 圧縮/解凍 ====================
+
+
+def compress_bytes_to_zstd(
+    payload: bytes,
     *,
-    max_length: int = DEFAULT_MAX_STORAGE_KEY_LENGTH,
-) -> bool:
-    """ファイルシステムで安全に扱えるキーかを判定する"""
+    level: int = 3,
+) -> bytes:
+    """バイト列をZstandardで圧縮する"""
 
-    if not value or len(value) > max_length:
-        return False
-
-    return all(char in SAFE_STORAGE_KEY_ALLOWED_CHARS for char in value)
+    compressor = zstd.ZstdCompressor(level=level)
+    return compressor.compress(payload)
 
 
-def sanitize_storage_key(
-    value: str,
+def decompress_zstd_to_bytes(payload: bytes) -> bytes:
+    """Zstandard圧縮済みのバイト列を展開する"""
+
+    decompressor = zstd.ZstdDecompressor()
+    return decompressor.decompress(payload)
+
+
+def compress_text_to_zstd(
+    content: str,
     *,
-    max_length: int = DEFAULT_MAX_STORAGE_KEY_LENGTH,
+    level: int = 3,
+    encoding: str = "utf-8",
+) -> bytes:
+    """テキストを指定エンコーディングでエンコードしてZstandard圧縮する"""
+
+    return compress_bytes_to_zstd(content.encode(encoding), level=level)
+
+
+def decompress_zstd_to_text(
+    payload: bytes,
+    *,
+    encoding: str = "utf-8",
 ) -> str:
-    """ストレージキーを安全な形式に正規化する"""
+    """Zstandard圧縮済みデータを展開しテキストに復元する"""
 
-    normalized = value.strip()
-    if is_safe_storage_key(normalized, max_length=max_length):
-        return normalized
+    return decompress_zstd_to_bytes(payload).decode(encoding)
 
-    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+# ==================== ハッシュ計算 ====================
 
 
 def hash_text_sha256(value: str) -> str:
@@ -42,50 +58,41 @@ def hash_text_sha256(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
-def normalize_parallel(parallel: bool | int, item_count: int) -> int:
-    """並列実行時のワーカー数を決定する"""
-
-    if not parallel:
-        return 1
-
-    if parallel is True:
-        return max(1, item_count)
-
-    if isinstance(parallel, int):
-        if parallel <= 1:
-            return 1
-        return min(parallel, item_count)
-
-    return 1
+# ==================== テスト ====================
 
 
 class TestMod:
-    def test_is_safe_storage_key(self) -> None:
+    def test_compress_and_decompress_bytes(self) -> None:
         """
         docs:
-            目的: is_safe_storage_key の判定ロジックを確認する。
+            目的: バイナリ圧縮/展開ユーティリティが無劣化で往復することを確認する。
             検証観点:
-                - 許可文字のみかつ長さ内のキーがTrueになる。
-                - 禁止文字や長過ぎるキーはFalseになる。
+                - compress_bytes_to_zstd の出力が元サイズより小さくなることがある。
+                - decompress_zstd_to_bytes が元データを復元できる。
         """
 
-        assert is_safe_storage_key("abc-123")
-        assert not is_safe_storage_key("abc/123")
-        assert not is_safe_storage_key("", max_length=5)
-        assert not is_safe_storage_key("a" * (DEFAULT_MAX_STORAGE_KEY_LENGTH + 1))
+        payload = b"A" * 1024
+        compressed = compress_bytes_to_zstd(payload)
+        assert len(compressed) < len(payload)
 
-    def test_sanitize_storage_key(self) -> None:
+        decompressed = decompress_zstd_to_bytes(compressed)
+        assert decompressed == payload
+
+    def test_compress_and_decompress_text(self) -> None:
         """
         docs:
-            目的: sanitize_storage_key の正規化挙動を確認する。
+            目的: テキストの圧縮/展開ヘルパーのエンコード処理を確認する。
             検証観点:
-                - 安全なキーは入力をそのまま返す。
-                - 危険なキーはハッシュ化された値を返す。
+                - compress_text_to_zstd がバイト列を返す。
+                - decompress_zstd_to_text で元テキストが復元される。
         """
 
-        assert sanitize_storage_key(" safe_key ") == "safe_key"
-        hashed = sanitize_storage_key("https://example.com/path?id=1")
-        assert len(hashed) == SHA256_HEX_LENGTH
+        text = "圧縮対象のテキストデータ"
+        compressed = compress_text_to_zstd(text, level=5)
+        assert isinstance(compressed, bytes)
+
+        restored = decompress_zstd_to_text(compressed)
+        assert restored == text
 
     def test_hash_text_sha256(self) -> None:
         """

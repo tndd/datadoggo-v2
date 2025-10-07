@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
-from pathlib import Path
 from typing import TYPE_CHECKING
 from xml.etree import ElementTree as ET
 from xml.etree.ElementTree import Element
@@ -15,7 +14,8 @@ from pydantic import ValidationError
 
 from domain.task_queue.http_request.common import create_http_request
 from infra.app_log import get_logger
-from infra.parse import parse_rss
+from infra.parse.rss import parse_rss
+from infra.storage.file import load_bytes
 
 if TYPE_CHECKING:
     from domain.task_queue.http_request.model import HttpRequestTask
@@ -130,8 +130,7 @@ class TestMod:
                 - titleがdescriptionとして設定される。
         """
 
-        fixture_path = Path(__file__).resolve().parents[4] / "mock" / "google_news.rss"
-        content = fixture_path.read_bytes()
+        content = load_bytes("mock/google_news.rss")
         root = parse_rss(content)
 
         items = convert_rss_element_to_http_requests(root, group="mock:google")

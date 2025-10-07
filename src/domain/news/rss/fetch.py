@@ -8,8 +8,8 @@ from xml.etree.ElementTree import Element
 import pytest
 
 from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
-from infra.compute import normalize_parallel
-from infra.parse import parse_rss
+from infra.parse.rss import parse_rss
+from infra.runtime import get_worker_count
 
 from .model import RssItem
 
@@ -37,7 +37,7 @@ def fetch_rss_from_links(
     if not items:
         return []
 
-    worker_count = normalize_parallel(parallel, len(items))
+    worker_count = get_worker_count(parallel)
     if worker_count <= 1:
         return [fetch_rss_element(item.url, client=client) for item in items]
 
