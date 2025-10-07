@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from domain.common import ensure_http_url, ensure_saved_at
+from domain.news.common import ensure_http_url, ensure_saved_at
 from infra.compute import hash_text_sha256
 
 from .model import HttpRequestTask, HttpRequestTaskRecord

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from sqlmodel import Session, col, select
 
-from domain.common import ensure_http_url
+from domain.news.common import ensure_http_url
 from domain.news.task_queue.http_request.model import HttpRequestTaskRecord
 from infra.storage.bucket import load_object, load_objects
 
