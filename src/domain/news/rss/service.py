@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
+from infra.web.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
 
 from .common import convert_rss_element_to_http_requests
 from .fetch import fetch_rss_from_links

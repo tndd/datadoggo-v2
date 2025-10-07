@@ -7,9 +7,9 @@ from xml.etree.ElementTree import Element
 
 import pytest
 
-from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
 from infra.parse.rss import parse_rss
 from infra.runtime import get_worker_count
+from infra.web.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
 
 from .model import RssItem
 
