@@ -8,7 +8,7 @@ from pathlib import Path
 from pyfakefs.fake_filesystem import FakeFilesystem
 
 from infra.app_log import get_logger
-from infra.compute import compress_text_to_zstd, decompress_zstd_to_text
+from infra.compute import compress_text_to_zstd, decompress_zstd_to_text, hash_text_sha256
 from infra.generate import generate_timestamp
 from infra.runtime import get_worker_count
 from infra.storage.file import load_bytes, save_bytes_to_file
@@ -48,13 +48,11 @@ def sanitize_storage_key(
 ) -> str:
     """ストレージキーを安全な形式に正規化する"""
 
-    import hashlib
-
     normalized = value.strip()
     if is_safe_storage_key(normalized, max_length=max_length):
         return normalized
 
-    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+    return hash_text_sha256(normalized)
 
 
 def save_object(
