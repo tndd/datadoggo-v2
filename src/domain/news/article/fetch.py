@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from domain.task_queue.http_request.model import HttpRequestTask
+from domain.news.task_queue.http_request.model import HttpRequestTask
 from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
 from infra.app_log import get_logger
 

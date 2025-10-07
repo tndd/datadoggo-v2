@@ -12,13 +12,13 @@ from xml.etree.ElementTree import Element
 import pytest
 from pydantic import ValidationError
 
-from domain.task_queue.http_request.common import create_http_request
+from domain.news.task_queue.http_request.common import create_http_request
 from infra.app_log import get_logger
 from infra.parse.rss import parse_rss
 from infra.storage.file import load_bytes
 
 if TYPE_CHECKING:
-    from domain.task_queue.http_request.model import HttpRequestTask
+    from domain.news.task_queue.http_request.model import HttpRequestTask
 
 DEFAULT_HTTP_REQUEST_STATUS_CODE = None
 _log = get_logger()

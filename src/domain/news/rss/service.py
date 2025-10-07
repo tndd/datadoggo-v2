@@ -11,7 +11,7 @@ from .fetch import fetch_rss_from_links
 from .search import RssItemQuery, load_rss_links
 
 if TYPE_CHECKING:
-    from domain.task_queue.http_request.model import HttpRequestTask
+    from domain.news.task_queue.http_request.model import HttpRequestTask
 
 
 def fetch_http_requests_from_query(
