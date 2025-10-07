@@ -10,7 +10,7 @@ from pyfakefs.fake_filesystem import FakeFilesystem
 from infra.app_log import get_logger
 from infra.compute import compress_text_to_zstd, decompress_zstd_to_text
 from infra.generate import generate_timestamp
-from infra.parallel import get_worker_count
+from infra.runtime import get_worker_count
 from infra.storage.file import load_bytes, save_bytes_to_file
 
 DEFAULT_STORAGE_ROOT = Path("data/bucket")

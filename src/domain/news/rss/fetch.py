@@ -8,8 +8,8 @@ from xml.etree.ElementTree import Element
 import pytest
 
 from infra.api.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
-from infra.parallel import get_worker_count
 from infra.parse.rss import parse_rss
+from infra.runtime import get_worker_count
 
 from .model import RssItem
 
