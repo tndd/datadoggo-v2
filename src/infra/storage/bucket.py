@@ -9,7 +9,7 @@ from pyfakefs.fake_filesystem import FakeFilesystem
 
 from infra.app_log import get_logger
 from infra.compute import compress_text_to_zstd, decompress_zstd_to_text
-from infra.naming import generate_timestamp
+from infra.generate import generate_timestamp
 from infra.parallel import get_worker_count
 from infra.storage.file import load_bytes, save_bytes_to_file
 
