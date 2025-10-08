@@ -1,18 +1,8 @@
 """Articleドメインのデータモデル群"""
 
-from __future__ import annotations
-
 from datetime import datetime
-from enum import Enum
 
 from pydantic import BaseModel, HttpUrl
-
-
-class ArticleFetchStatus(str, Enum):
-    """記事取得の保存状況"""
-
-    SAVED = "saved"
-    FETCH_FAILED = "fetch_failed"
 
 
 class Article(BaseModel):

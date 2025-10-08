@@ -1,7 +1,5 @@
 """Article検索とArticle再構築"""
 
-from __future__ import annotations
-
 from sqlmodel import Session, col, select
 
 from infra.storage.bucket import load_object, load_objects
@@ -18,9 +16,7 @@ def find_article_by_id(session: Session, http_request_id: str) -> Article | None
     """保存済みArticleを取得する。request_task_queueテーブルからメタデータを取得し、バケットからHTMLを取得"""
 
     # request_task_queueテーブルからメタデータを取得
-    statement = select(RequestTaskRecord).where(
-        RequestTaskRecord.id == http_request_id
-    )
+    statement = select(RequestTaskRecord).where(RequestTaskRecord.id == http_request_id)
     http_request_record = session.exec(statement).first()
     if http_request_record is None:
         return None

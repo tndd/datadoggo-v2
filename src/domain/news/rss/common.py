@@ -24,6 +24,9 @@ DEFAULT_HTTP_REQUEST_STATUS_CODE = None
 _log = get_logger()
 
 
+# TODO: fetchに移動
+
+
 def convert_rss_element_to_http_requests(
     root: Element,
     *,
