@@ -1,4 +1,4 @@
-"""HttpRequestTaskドメインモデル群"""
+"""RequestTaskドメインモデル群"""
 
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ def validate_group_format(value: str | None) -> str | None:
     return value
 
 
-class HttpRequestTask(BaseModel):
+class RequestTask(BaseModel):
     """http_request_queueテーブルの要素を表すドメインモデル
 
     Attributes:
@@ -85,7 +85,7 @@ class HttpRequestTask(BaseModel):
         return not self.is_success()
 
 
-class HttpRequestTaskRecord(SQLModel, table=True):
+class RequestTaskRecord(SQLModel, table=True):
     """SQLModelによるhttp_request_queueテーブル定義"""
 
     __tablename__: str = "http_request_queue"  # pyright: ignore[reportIncompatibleVariableOverride]
@@ -195,7 +195,7 @@ class TestMod:
         url_value = HttpUrl("https://example.com/rss")
 
         # status_code=200 の場合
-        success = HttpRequestTask(
+        success = RequestTask(
             id="abc",
             url=url_value,
             description="example",
@@ -218,7 +218,7 @@ class TestMod:
         assert not backlog_error.is_success()
 
         # group が None でも生成可能
-        no_group = HttpRequestTask(
+        no_group = RequestTask(
             id="xyz",
             url=url_value,
             description="no group",
@@ -233,7 +233,7 @@ class TestMod:
         """
         docs:
             目的:
-                HttpRequestTaskが不正なgroup値でインスタンス化された際に
+                RequestTaskが不正なgroup値でインスタンス化された際に
                 ValueErrorが発生することを確認する。
             検証観点:
                 - 不正なgroup形式でValidationErrorが発生する。
@@ -249,7 +249,7 @@ class TestMod:
 
         # コロンなしの不正な形式
         try:
-            HttpRequestTask(
+            RequestTask(
                 id="invalid1",
                 url=url_value,
                 description="invalid",
@@ -267,7 +267,7 @@ class TestMod:
 
         # 空の要素を含む形式
         try:
-            HttpRequestTask(
+            RequestTask(
                 id="invalid2",
                 url=url_value,
                 description="invalid",
@@ -282,7 +282,7 @@ class TestMod:
 
         # 前後に空白を含む形式
         try:
-            HttpRequestTask(
+            RequestTask(
                 id="invalid3",
                 url=url_value,
                 description="invalid",

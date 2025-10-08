@@ -12,13 +12,13 @@ from xml.etree.ElementTree import Element
 import pytest
 from pydantic import ValidationError
 
-from domain.news.task_queue.http_request.common import create_http_request
 from infra.logger import get_logger
 from infra.parse.rss import parse_rss
 from infra.storage.file import load_bytes
+from infra.web.queue.common import create_request_task
 
 if TYPE_CHECKING:
-    from domain.news.task_queue.http_request.model import HttpRequestTask
+    from infra.web.queue.model import RequestTask
 
 DEFAULT_HTTP_REQUEST_STATUS_CODE = None
 _log = get_logger()
@@ -29,11 +29,11 @@ def convert_rss_element_to_http_requests(
     *,
     group: str | None,
     default_status_code: int | None = DEFAULT_HTTP_REQUEST_STATUS_CODE,
-) -> list[HttpRequestTask]:
-    """RSSのitem要素をHttpRequestTaskリストに変換する"""
+) -> list[RequestTask]:
+    """RSSのitem要素をRequestTaskリストに変換する"""
 
     channel = _extract_channel(root)
-    http_requests: list[HttpRequestTask] = []
+    http_requests: list[RequestTask] = []
 
     for item in channel.findall("item"):
         link = _extract_text(item, "link")
@@ -49,7 +49,7 @@ def convert_rss_element_to_http_requests(
 
         try:
             http_requests.append(
-                create_http_request(
+                create_request_task(
                     url=link,
                     description=title,
                     group=group,
@@ -123,9 +123,9 @@ class TestMod:
         """
         docs:
             目的:
-                RSSモックファイルからHttpRequestTaskリストが生成されることを確認する。
+                RSSモックファイルからRequestTaskリストが生成されることを確認する。
             検証観点:
-                - item要素からHttpRequestTaskが生成される。
+                - item要素からRequestTaskが生成される。
                 - pubDateがcreated_atとしてUTCのdatetimeに変換される。
                 - titleがdescriptionとして設定される。
         """
@@ -135,7 +135,7 @@ class TestMod:
 
         items = convert_rss_element_to_http_requests(root, group="mock:google")
 
-        assert items, "HttpRequestTaskが1件以上生成されること"
+        assert items, "RequestTaskが1件以上生成されること"
         first = items[0]
         assert first.description and first.description.startswith(
             "Stocks dip as dollar rises"
@@ -155,7 +155,7 @@ class TestMod:
                 必須要素が欠けたitemをスキップすることを確認する。
             検証観点:
                 - linkが欠けたitemは結果に含まれない。
-                - 妥当なitemのみがHttpRequestTaskとして返る。
+                - 妥当なitemのみがRequestTaskとして返る。
         """
 
         rss_xml = """
@@ -188,7 +188,7 @@ class TestMod:
                 URLが不正なitemが全体処理を止めずにスキップされることを確認する。
             検証観点:
                 - 不正URLのitemは結果に含まれない。
-                - 妥当なitemはHttpRequestTaskとして生成される。
+                - 妥当なitemはRequestTaskとして生成される。
         """
 
         rss_xml = """

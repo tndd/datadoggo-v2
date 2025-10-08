@@ -24,7 +24,7 @@ def save_article_content(article: Article) -> str:
     return saved_key
 
 
-# 取得失敗はHttpRequestTaskのstatus_codeで管理されるため、この関数は不要
+# 取得失敗はRequestTaskのstatus_codeで管理されるため、この関数は不要
 
 
 class TestMod:

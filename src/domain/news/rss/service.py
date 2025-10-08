@@ -11,7 +11,7 @@ from .fetch import fetch_rss_from_links
 from .search import RssItemQuery, load_rss_links
 
 if TYPE_CHECKING:
-    from domain.news.task_queue.http_request.model import HttpRequestTask
+    from infra.web.queue.model import RequestTask
 
 
 def fetch_http_requests_from_query(
@@ -19,14 +19,14 @@ def fetch_http_requests_from_query(
     *,
     client: HttpsClient | None = None,
     parallel: bool | int = False,
-) -> list[HttpRequestTask]:
-    """RssItemQuery に一致するリンクを取得し HttpRequestTask リストを返す"""
+) -> list[RequestTask]:
+    """RssItemQuery に一致するリンクを取得し RequestTask リストを返す"""
 
     rss_items = load_rss_links(query)
     elements = fetch_rss_from_links(rss_items, client=client, parallel=parallel)
 
-    # 各ElementをHttpRequestTaskリストに変換して結合
-    http_requests: list[HttpRequestTask] = []
+    # 各ElementをRequestTaskリストに変換して結合
+    http_requests: list[RequestTask] = []
     for rss_item, element in zip(rss_items, elements, strict=True):
         # RssItemからgroupを取得（group:nameの形式）
         group = f"{rss_item.group}:{rss_item.name}"
@@ -44,11 +44,11 @@ class TestMod:
         """
         docs:
             目的:
-                RssItemQuery で指定したリンクの HttpRequestTask が
+                RssItemQuery で指定したリンクの RequestTask が
                 取得できることを確認する。
             検証観点:
                 - group 指定で絞り込まれたリンクのみが通信される。
-                - HttpRequestTaskからdescription, url, groupが読み取れる。
+                - RequestTaskからdescription, url, groupが読み取れる。
         """
 
         yaml_path = tmp_path / "links.yml"

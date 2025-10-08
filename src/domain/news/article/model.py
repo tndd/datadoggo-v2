@@ -19,7 +19,7 @@ class Article(BaseModel):
     """メタデータとコンテンツを結合したビュー
 
     Attributes:
-        created_at: 記事の公開日時(UTC)。HttpRequestTaskのcreated_atを継承。
+        created_at: 記事の公開日時(UTC)。RequestTaskのcreated_atを継承。
         updated_at: 記事HTMLの取得日時(UTC)。fetch時の現在時刻が設定される。
     """
 
@@ -41,7 +41,7 @@ class TestMod:
             目的: Article がHTML本体を保持できることを確認する。
             検証観点:
                 - HTML文字列が格納される。
-                - HttpRequestTask由来の属性が保持される。
+                - RequestTask由来の属性が保持される。
                 - description と group が nullable であることを確認する。
         """
 

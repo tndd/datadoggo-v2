@@ -5,8 +5,8 @@ from __future__ import annotations
 from sqlmodel import Session, col, select
 
 from domain.news.common import ensure_http_url
-from domain.news.task_queue.http_request.model import HttpRequestTaskRecord
 from infra.storage.bucket import load_object, load_objects
+from infra.web.queue.model import RequestTaskRecord
 
 from .model import Article
 
@@ -18,8 +18,8 @@ def find_article_by_id(session: Session, http_request_id: str) -> Article | None
     """保存済みArticleを取得する。http_request_queueテーブルからメタデータを取得し、バケットからHTMLを取得"""
 
     # http_request_queueテーブルからメタデータを取得
-    statement = select(HttpRequestTaskRecord).where(
-        HttpRequestTaskRecord.id == http_request_id
+    statement = select(RequestTaskRecord).where(
+        RequestTaskRecord.id == http_request_id
     )
     http_request_record = session.exec(statement).first()
     if http_request_record is None:
@@ -57,8 +57,8 @@ def search_articles_by_ids(
         return {}
 
     # メタデータを一括取得
-    statement = select(HttpRequestTaskRecord).where(
-        col(HttpRequestTaskRecord.id).in_(http_request_ids)
+    statement = select(RequestTaskRecord).where(
+        col(RequestTaskRecord.id).in_(http_request_ids)
     )
     http_request_records = session.exec(statement).all()
 
@@ -111,7 +111,7 @@ class TestMod:
         docs:
             目的: 保存済み記事を完全なArticleモデルとして取得できることを確認する。
             検証観点:
-                - HttpRequestTaskRecord とバケット HTML から Article が復元される。
+                - RequestTaskRecord とバケット HTML から Article が復元される。
         """
 
         import os
@@ -120,9 +120,9 @@ class TestMod:
 
         from pydantic import HttpUrl
 
-        from domain.news.task_queue.http_request.model import HttpRequestTaskRecord
         from infra.storage.file import get_project_root
         from infra.storage.rds import session_scope
+        from infra.web.queue.model import RequestTaskRecord
 
         from .command import save_article_content
 
@@ -140,9 +140,9 @@ class TestMod:
         engine = create_sqlite_engine()
 
         with session_scope(engine) as session:
-            # HttpRequestTaskレコードを作成
+            # RequestTaskレコードを作成
             request_time = datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc)
-            http_request_record = HttpRequestTaskRecord(
+            http_request_record = RequestTaskRecord(
                 id="article_test",
                 url="https://example.com/article",
                 description="記事",
@@ -183,9 +183,9 @@ class TestMod:
         import os
         from datetime import datetime, timezone
 
-        from domain.news.task_queue.http_request.model import HttpRequestTaskRecord
         from infra.storage.file import get_project_root
         from infra.storage.rds import session_scope
+        from infra.web.queue.model import RequestTaskRecord
 
         project_root = get_project_root()
         if not fs.exists(str(project_root)):
@@ -206,7 +206,7 @@ class TestMod:
 
             # status_code != 200のテスト
             request_time = datetime(2025, 9, 29, 10, 0, tzinfo=timezone.utc)
-            failed_request = HttpRequestTaskRecord(
+            failed_request = RequestTaskRecord(
                 id="failed_test",
                 url="https://example.com/fail",
                 description="失敗",
@@ -227,7 +227,7 @@ class TestMod:
                 複数IDで複数のArticleを取得でき、
                 idをkeyとしたdictが返ることを確認する。
             検証観点:
-                - 複数のHttpRequestTaskRecordとバケットデータからArticleが復元される。
+                - 複数のRequestTaskRecordとバケットデータからArticleが復元される。
                 - 返り値がdict[str, Article]である。
                 - キーはhttp_request_idと一致する。
         """
@@ -238,9 +238,9 @@ class TestMod:
 
         from pydantic import HttpUrl
 
-        from domain.news.task_queue.http_request.model import HttpRequestTaskRecord
         from infra.storage.file import get_project_root
         from infra.storage.rds import session_scope
+        from infra.web.queue.model import RequestTaskRecord
 
         from .command import save_article_content
 
@@ -257,10 +257,10 @@ class TestMod:
         engine = create_sqlite_engine()
 
         with session_scope(engine) as session:
-            # 複数のHttpRequestTaskレコードを作成
+            # 複数のRequestTaskレコードを作成
             request_time = datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc)
             http_request_records = [
-                HttpRequestTaskRecord(
+                RequestTaskRecord(
                     id=f"article_{i}",
                     url=f"https://example.com/article/{i}",
                     description=f"記事{i}",
@@ -320,9 +320,9 @@ class TestMod:
 
         from pydantic import HttpUrl
 
-        from domain.news.task_queue.http_request.model import HttpRequestTaskRecord
         from infra.storage.file import get_project_root
         from infra.storage.rds import session_scope
+        from infra.web.queue.model import RequestTaskRecord
 
         from .command import save_article_content
 
@@ -342,7 +342,7 @@ class TestMod:
             request_time = datetime(2025, 9, 29, 9, 0, tzinfo=timezone.utc)
 
             # 成功するレコード
-            success_record = HttpRequestTaskRecord(
+            success_record = RequestTaskRecord(
                 id="success",
                 url="https://example.com/success",
                 description="成功",
@@ -354,7 +354,7 @@ class TestMod:
             session.add(success_record)
 
             # status_code != 200
-            failed_status_record = HttpRequestTaskRecord(
+            failed_status_record = RequestTaskRecord(
                 id="failed_status",
                 url="https://example.com/failed",
                 description="失敗",
@@ -366,7 +366,7 @@ class TestMod:
             session.add(failed_status_record)
 
             # バケットなし
-            no_bucket_record = HttpRequestTaskRecord(
+            no_bucket_record = RequestTaskRecord(
                 id="no_bucket",
                 url="https://example.com/no_bucket",
                 description="バケットなし",

@@ -1,4 +1,4 @@
-"""HttpRequestTaskをhttp_request_queueテーブルへ書き込む処理(CQRSのコマンド側)"""
+"""RequestTaskをhttp_request_queueテーブルへ書き込む処理(CQRSのコマンド側)"""
 
 from __future__ import annotations
 
@@ -9,12 +9,12 @@ from sqlmodel import select
 from domain.news.common import ensure_saved_at
 from infra.storage.rds import session_scope
 
-from .common import create_http_request, http_request_to_record, record_to_http_request
-from .model import HttpRequestTask, HttpRequestTaskRecord
+from .common import create_request_task, http_request_to_record, record_to_http_request
+from .model import RequestTask, RequestTaskRecord
 
 
-def store_http_request(request: HttpRequestTask) -> HttpRequestTask:
-    """HttpRequestTaskを保存し、保存後の状態を返す"""
+def store_http_request(request: RequestTask) -> RequestTask:
+    """RequestTaskを保存し、保存後の状態を返す"""
 
     with session_scope() as session:
         normalized = request.model_copy(update={"updated_at": ensure_saved_at()})
@@ -31,16 +31,16 @@ class TestMod:
         docs:
             目的:
                 store_http_request が永続化を行い、戻り値として最新状態の
-                HttpRequestTask を返すことを確認する。
+                RequestTask を返すことを確認する。
             検証観点:
-                - create_http_request で生成した HttpRequestTask が
+                - create_request_task で生成した RequestTask が
                   store_http_request で保存される。
                 - 保存後に同一IDのレコードがDB上に存在する。
                 - created_at が保持され、updated_at が更新される。
         """
 
         # pytestにより自動的にインメモリDBが使用される
-        request = create_http_request(
+        request = create_request_task(
             url="https://example.com/store",
             description="Store Request",
             group="test:store",
@@ -55,8 +55,8 @@ class TestMod:
         assert stored.updated_at >= stored.created_at
 
         with session_scope() as session:
-            statement = select(HttpRequestTaskRecord).where(
-                HttpRequestTaskRecord.id == request.id
+            statement = select(RequestTaskRecord).where(
+                RequestTaskRecord.id == request.id
             )
             record = session.exec(statement).first()
             assert record is not None

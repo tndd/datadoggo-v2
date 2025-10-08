@@ -1,4 +1,4 @@
-"""HttpRequestTaskをhttp_request_queueテーブルから読み出す処理(CQRSのクエリ側)"""
+"""RequestTaskをhttp_request_queueテーブルから読み出す処理(CQRSのクエリ側)"""
 
 from __future__ import annotations
 
@@ -11,11 +11,11 @@ from sqlmodel import select
 from infra.storage.rds import session_scope
 
 from .common import record_to_http_request
-from .model import HttpRequestTask, HttpRequestTaskRecord
+from .model import RequestTask, RequestTaskRecord
 
 
 class HttpRequestQuery(BaseModel):
-    """HttpRequestTask検索時の条件入力モデル"""
+    """RequestTask検索時の条件入力モデル"""
 
     limit: int = Field(default=100, ge=1, le=500)
     offset: int = Field(default=0, ge=0)
@@ -27,12 +27,12 @@ class HttpRequestQuery(BaseModel):
     created_at_to: datetime | None = None
 
 
-def find_http_request_by_id(request_id: str) -> HttpRequestTask | None:
-    """IDでHttpRequestTaskを検索し、存在すれば返す"""
+def find_http_request_by_id(request_id: str) -> RequestTask | None:
+    """IDでRequestTaskを検索し、存在すれば返す"""
 
     with session_scope() as session:
-        statement = select(HttpRequestTaskRecord).where(
-            HttpRequestTaskRecord.id == request_id
+        statement = select(RequestTaskRecord).where(
+            RequestTaskRecord.id == request_id
         )
         record = session.exec(statement).first()
         if record is None:
@@ -41,51 +41,51 @@ def find_http_request_by_id(request_id: str) -> HttpRequestTask | None:
         return record_to_http_request(record)
 
 
-def search_http_requests(query: HttpRequestQuery) -> list[HttpRequestTask]:
-    """HttpRequestTaskをページングして取得する"""
+def search_http_requests(query: HttpRequestQuery) -> list[RequestTask]:
+    """RequestTaskをページングして取得する"""
 
     with session_scope() as session:
-        statement = select(HttpRequestTaskRecord)
+        statement = select(RequestTaskRecord)
 
         if query.description:
             statement = statement.where(
                 # SQLModelの動的属性(contains)はSQLAlchemyカラムのメソッドだが、
                 # 型チェッカーでは認識されない既知の問題のため型無視
                 # 参考: https://github.com/fastapi/sqlmodel/discussions/428
-                HttpRequestTaskRecord.description.contains(query.description)  # type: ignore[attr-defined]
+                RequestTaskRecord.description.contains(query.description)  # type: ignore[attr-defined]
             )
 
         if query.url:
-            statement = statement.where(HttpRequestTaskRecord.url == query.url)
+            statement = statement.where(RequestTaskRecord.url == query.url)
 
         if query.group:
             statement = statement.where(
                 # SQLModelの動的属性(contains)はSQLAlchemyカラムのメソッドだが、
                 # 型チェッカーでは認識されない既知の問題のため型無視
                 # 参考: https://github.com/fastapi/sqlmodel/discussions/428
-                HttpRequestTaskRecord.group.contains(query.group)  # type: ignore[attr-defined]
+                RequestTaskRecord.group.contains(query.group)  # type: ignore[attr-defined]
             )
 
         if query.status_code is not None:
             statement = statement.where(
-                HttpRequestTaskRecord.status_code == query.status_code
+                RequestTaskRecord.status_code == query.status_code
             )
 
         if query.created_at_from is not None:
             statement = statement.where(
-                HttpRequestTaskRecord.created_at >= query.created_at_from
+                RequestTaskRecord.created_at >= query.created_at_from
             )
 
         if query.created_at_to is not None:
             statement = statement.where(
-                HttpRequestTaskRecord.created_at <= query.created_at_to
+                RequestTaskRecord.created_at <= query.created_at_to
             )
 
         statement = (
             # SQLAlchemyのdesc()関数はカラム型を受け取るが、SQLModelの型定義では
             # カラム型が適切に推論されない既知の問題のため型無視
             # 参考: https://github.com/fastapi/sqlmodel/discussions/428
-            statement.order_by(desc(HttpRequestTaskRecord.created_at))  # type: ignore[arg-type]
+            statement.order_by(desc(RequestTaskRecord.created_at))  # type: ignore[arg-type]
             .offset(query.offset)
             .limit(query.limit)
         )
@@ -100,16 +100,16 @@ class TestMod:
             目的:
                 find_http_request_by_id が既存レコードを取得できることを確認する。
             検証観点:
-                - store_http_request で保存したIDを指定すると HttpRequestTask が返る。
-                - 取得した HttpRequestTask の属性が保存時と一致する。
+                - store_http_request で保存したIDを指定すると RequestTask が返る。
+                - 取得した RequestTask の属性が保存時と一致する。
                 - created_at / updated_at が取得結果でも保持される。
         """
 
         from .command import store_http_request
-        from .common import create_http_request
+        from .common import create_request_task
 
         # pytestにより自動的にインメモリDBが使用される
-        request = create_http_request(
+        request = create_request_task(
             url="https://example.com/find",
             description="Find Target",
             group="test:find",
@@ -152,24 +152,24 @@ class TestMod:
         """
 
         from .command import store_http_request
-        from .common import create_http_request
+        from .common import create_request_task
 
         # pytestにより自動的にインメモリDBが使用される
-        request_success = create_http_request(
+        request_success = create_request_task(
             url="https://example.com/success",
             description="Daily Success Report",
             group="test:success",
             status_code=200,
             created_at=datetime(2024, 1, 10, 8, 0, 0),
         )
-        request_failure = create_http_request(
+        request_failure = create_request_task(
             url="https://example.com/failure",
             description="Weekly Failure Recap",
             group="test:failure",
             status_code=500,
             created_at=datetime(2024, 1, 5, 8, 0, 0),
         )
-        request_other = create_http_request(
+        request_other = create_request_task(
             url="https://example.org/other",
             description="Daily Other News",
             group="other:news",

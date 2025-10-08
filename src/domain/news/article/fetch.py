@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from domain.news.task_queue.http_request.model import HttpRequestTask
 from infra.logger import get_logger
 from infra.web.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
+from infra.web.queue.model import RequestTask
 
 from .model import Article
 
@@ -12,12 +12,12 @@ _log = get_logger()
 
 
 def fetch_article_content(
-    request: HttpRequestTask, *, client: HttpsClient | None = None
+    request: RequestTask, *, client: HttpsClient | None = None
 ) -> Article | None:
-    """HttpRequestTaskを基に記事HTMLを取得しArticleを生成する
+    """RequestTaskを基に記事HTMLを取得しArticleを生成する
 
     タイムスタンプの挙動:
-        - created_at: HttpRequestTaskのcreated_atを保持（記事の公開日時を表す）
+        - created_at: RequestTaskのcreated_atを保持（記事の公開日時を表す）
         - updated_at: 現在時刻を設定（記事HTMLの取得日時を表す）
     """
 
@@ -75,7 +75,7 @@ class TestMod:
             目的: ステータス200の場合にArticleが生成されることを確認する。
             検証観点:
                 - HTML本文がデコードされる。
-                - HttpRequestTaskの属性が引き継がれる。
+                - RequestTaskの属性が引き継がれる。
                 - description が nullable であることを確認する。
         """
 
@@ -105,7 +105,7 @@ class TestMod:
 
         client = HttpsClient(fetcher=mock_fetcher)
 
-        request = HttpRequestTask(
+        request = RequestTask(
             id="abc",
             url=cast(HttpUrl, "https://example.com/detail"),
             description="テスト",
@@ -123,7 +123,7 @@ class TestMod:
         assert article.description == "テスト"
 
         # description が None のケース
-        request_no_desc = HttpRequestTask(
+        request_no_desc = RequestTask(
             id="xyz",
             url=cast(HttpUrl, "https://example.com/no-title"),
             description=None,
@@ -169,7 +169,7 @@ class TestMod:
 
         client = HttpsClient(fetcher=mock_fetcher)
 
-        request = HttpRequestTask(
+        request = RequestTask(
             id="abc",
             url=cast(HttpUrl, "https://example.com/detail"),
             description="テスト",
