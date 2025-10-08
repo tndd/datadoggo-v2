@@ -2,17 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 from pathlib import Path
 
+import zstandard as zstd
 from pyfakefs.fake_filesystem import FakeFilesystem
 
-from infra.compute import (
-    compress_text_to_zstd,
-    decompress_zstd_to_text,
-    hash_text_sha256,
-)
-from infra.generate import generate_timestamp
 from infra.logger import get_logger
 from infra.runtime import get_worker_count
 from infra.storage.file import load_bytes, save_bytes_to_file
@@ -56,7 +53,7 @@ def sanitize_storage_key(
     if is_safe_storage_key(normalized, max_length=max_length):
         return normalized
 
-    return hash_text_sha256(normalized)
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
 def save_object(
@@ -75,7 +72,8 @@ def save_object(
             bucket_name, resolved_key, storage_root, DEFAULT_OBJECT_EXTENSION
         )
 
-        payload_bytes = compress_text_to_zstd(payload, encoding=encoding)
+        compressor = zstd.ZstdCompressor(level=3)
+        payload_bytes = compressor.compress(payload.encode(encoding))
         save_bytes_to_file(payload_bytes, target_path)
         _log.info(
             "オブジェクトを保存しました",
@@ -127,7 +125,8 @@ def load_object(
             )
             return None
 
-        result = decompress_zstd_to_text(compressed_data, encoding=encoding)
+        decompressor = zstd.ZstdDecompressor()
+        result = decompressor.decompress(compressed_data).decode(encoding)
         text_bytes = len(result.encode(encoding))
         _log.info(
             "テキストオブジェクトを読み込みました",
@@ -183,7 +182,7 @@ def _resolve_storage_key(
     if sanitized:
         return sanitized
 
-    timestamp = generate_timestamp()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     return f"auto_{timestamp}"
 
 

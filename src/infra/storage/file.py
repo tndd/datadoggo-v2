@@ -1,4 +1,5 @@
 # file.py
+from datetime import datetime
 from enum import Enum
 from inspect import currentframe
 from pathlib import Path
@@ -6,7 +7,6 @@ from types import FrameType
 from typing import Optional, Union
 
 from infra.logger import get_logger
-from infra.generate import generate_timestamped_filename
 
 PathLike = Union[str, Path]
 
@@ -222,10 +222,13 @@ def _prepare_output_path(
     if filepath is not None:
         return _to_path(filepath)
 
-    generated = generate_timestamped_filename(
-        prefix="out", extension=format.value, output_dir=output_dir
-    )
-    return Path(generated)
+    # タイムスタンプベースのファイル名生成
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"out_{timestamp}.{format.value}"
+
+    if output_dir is None:
+        return Path(filename)
+    return Path(output_dir) / filename
 
 
 def _to_path(path: PathLike) -> Path:
