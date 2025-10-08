@@ -4,12 +4,14 @@ import sys
 from collections.abc import Callable
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, TypeVar
 
 from sqlalchemy.engine import Engine, make_url
 from sqlmodel import Session, SQLModel, create_engine
 
 from infra.app_log import get_logger
+
+T = TypeVar("T", bound=SQLModel)
 
 DEFAULT_DATABASE_URL = "sqlite:///data/datadoggo.db"
 
@@ -124,6 +126,53 @@ def _ensure_sqlite_directory(database_url: str) -> None:
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
 
+def save_record(record: T, *, engine: Engine | None = None) -> T:
+    """SQLModelレコードを保存し、最新状態を返す
+
+    - session.merge でupsert
+    - flush + refresh で最新状態を取得
+    - トランザクション管理を自動化
+
+    Args:
+        record: 保存するSQLModelレコード
+        engine: 使用するエンジン (Noneの場合はデフォルト)
+
+    Returns:
+        保存後の最新状態のレコード
+    """
+    with session_scope(engine) as session:
+        merged = session.merge(record)
+        session.flush()
+        session.refresh(merged)
+        session.expunge(merged)  # セッションから切り離してDetachedにならないようにする
+        return merged
+
+
+def save_records(records: list[T], *, engine: Engine | None = None) -> list[T]:
+    """複数のSQLModelレコードを一括保存し、最新状態のリストを返す
+
+    Args:
+        records: 保存するSQLModelレコードのリスト
+        engine: 使用するエンジン (Noneの場合はデフォルト)
+
+    Returns:
+        保存後の最新状態のレコードリスト
+    """
+    if not records:
+        return []
+
+    with session_scope(engine) as session:
+        results: list[T] = []
+        for record in records:
+            merged = session.merge(record)
+            session.flush()
+            session.refresh(merged)
+            # セッションから切り離してDetachedにならないようにする
+            session.expunge(merged)
+            results.append(merged)
+        return results
+
+
 class TestMod:
     def test_ensure_sqlite_directory_creates_parent(self, fs) -> None:
         """
@@ -142,3 +191,129 @@ class TestMod:
         # 相対パス（カレントディレクトリ基準）
         _ensure_sqlite_directory("sqlite:///relative/path/test.db")
         assert fs.exists("relative/path")
+
+    def test_save_record_saves_and_returns_refreshed(self) -> None:
+        """
+        docs:
+            目的:
+                save_record が正しく保存し最新状態を返すことを確認する。
+            検証観点:
+                - レコードがDBに保存される
+                - 返り値が最新状態 (flush + refresh 済み)
+        """
+        from datetime import datetime, timezone
+
+        from domain.news.task_queue.http_request.model import (
+            HttpRequestTaskRecord,
+        )
+
+        # テーブル作成（モデルimport後に実行が必要）
+        initialize_database()
+
+        # pytestにより自動的にインメモリDBが使用される
+        record = HttpRequestTaskRecord(
+            id="test_id",
+            url="https://example.com/test",
+            description="Test Record",
+            group="test:save",
+            status_code=200,
+            created_at=datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+            updated_at=datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+        )
+
+        saved = save_record(record)
+
+        assert saved.id == record.id
+        assert saved.description == "Test Record"
+        assert saved.group == "test:save"
+
+        # DBに保存されていることを確認
+        with session_scope() as session:
+            from sqlmodel import select
+
+            statement = select(HttpRequestTaskRecord).where(
+                HttpRequestTaskRecord.id == "test_id"
+            )
+            fetched = session.exec(statement).first()
+            assert fetched is not None
+            assert fetched.description == "Test Record"
+
+    def test_save_records_saves_multiple_records(self) -> None:
+        """
+        docs:
+            目的:
+                save_records が複数レコードを一括保存できることを確認する。
+            検証観点:
+                - 全レコードが保存される
+                - トランザクションが共有される
+        """
+        from datetime import datetime, timezone
+
+        from domain.news.task_queue.http_request.model import (
+            HttpRequestTaskRecord,
+        )
+
+        # テーブル作成（モデルimport後に実行が必要）
+        initialize_database()
+
+        # pytestにより自動的にインメモリDBが使用される
+        base_time = datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        records = [
+            HttpRequestTaskRecord(
+                id="test_id_1",
+                url="https://example.com/1",
+                description="Record 1",
+                group="test:batch",
+                status_code=200,
+                created_at=base_time,
+                updated_at=base_time,
+            ),
+            HttpRequestTaskRecord(
+                id="test_id_2",
+                url="https://example.com/2",
+                description="Record 2",
+                group="test:batch",
+                status_code=200,
+                created_at=base_time,
+                updated_at=base_time,
+            ),
+            HttpRequestTaskRecord(
+                id="test_id_3",
+                url="https://example.com/3",
+                description="Record 3",
+                group="test:batch",
+                status_code=200,
+                created_at=base_time,
+                updated_at=base_time,
+            ),
+        ]
+
+        saved_records = save_records(records)
+
+        expected_count = 3
+        assert len(saved_records) == expected_count
+        assert saved_records[0].id == "test_id_1"
+        assert saved_records[1].id == "test_id_2"
+        assert saved_records[2].id == "test_id_3"
+
+        # DBに保存されていることを確認
+        with session_scope() as session:
+            from sqlmodel import select
+
+            statement = select(HttpRequestTaskRecord).where(
+                HttpRequestTaskRecord.group == "test:batch"
+            )
+            fetched = session.exec(statement).all()
+            assert len(fetched) == expected_count
+
+    def test_save_records_returns_empty_list_for_empty_input(self) -> None:
+        """
+        docs:
+            目的:
+                save_records が空リスト入力時に空リストを返すことを確認する。
+            検証観点:
+                - 空リスト入力で空リストが返る
+                - エラーが発生しない
+        """
+        result = save_records([])
+        assert result == []
