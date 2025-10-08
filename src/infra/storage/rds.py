@@ -203,15 +203,13 @@ class TestMod:
         """
         from datetime import datetime, timezone
 
-        from domain.news.task_queue.http_request.model import (
-            HttpRequestTaskRecord,
-        )
+        from infra.web.queue.model import RequestTaskRecord
 
         # テーブル作成（モデルimport後に実行が必要）
         initialize_database()
 
         # pytestにより自動的にインメモリDBが使用される
-        record = HttpRequestTaskRecord(
+        record = RequestTaskRecord(
             id="test_id",
             url="https://example.com/test",
             description="Test Record",
@@ -231,8 +229,8 @@ class TestMod:
         with session_scope() as session:
             from sqlmodel import select
 
-            statement = select(HttpRequestTaskRecord).where(
-                HttpRequestTaskRecord.id == "test_id"
+            statement = select(RequestTaskRecord).where(
+                RequestTaskRecord.id == "test_id"
             )
             fetched = session.exec(statement).first()
             assert fetched is not None
@@ -249,9 +247,7 @@ class TestMod:
         """
         from datetime import datetime, timezone
 
-        from domain.news.task_queue.http_request.model import (
-            HttpRequestTaskRecord,
-        )
+        from infra.web.queue.model import RequestTaskRecord
 
         # テーブル作成（モデルimport後に実行が必要）
         initialize_database()
@@ -259,7 +255,7 @@ class TestMod:
         # pytestにより自動的にインメモリDBが使用される
         base_time = datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
         records = [
-            HttpRequestTaskRecord(
+            RequestTaskRecord(
                 id="test_id_1",
                 url="https://example.com/1",
                 description="Record 1",
@@ -268,7 +264,7 @@ class TestMod:
                 created_at=base_time,
                 updated_at=base_time,
             ),
-            HttpRequestTaskRecord(
+            RequestTaskRecord(
                 id="test_id_2",
                 url="https://example.com/2",
                 description="Record 2",
@@ -277,7 +273,7 @@ class TestMod:
                 created_at=base_time,
                 updated_at=base_time,
             ),
-            HttpRequestTaskRecord(
+            RequestTaskRecord(
                 id="test_id_3",
                 url="https://example.com/3",
                 description="Record 3",
@@ -300,8 +296,8 @@ class TestMod:
         with session_scope() as session:
             from sqlmodel import select
 
-            statement = select(HttpRequestTaskRecord).where(
-                HttpRequestTaskRecord.group == "test:batch"
+            statement = select(RequestTaskRecord).where(
+                RequestTaskRecord.group == "test:batch"
             )
             fetched = session.exec(statement).all()
             assert len(fetched) == expected_count

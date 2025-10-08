@@ -15,9 +15,9 @@ HTTP_OK = 200
 
 
 def find_article_by_id(session: Session, http_request_id: str) -> Article | None:
-    """保存済みArticleを取得する。http_request_queueテーブルからメタデータを取得し、バケットからHTMLを取得"""
+    """保存済みArticleを取得する。request_task_queueテーブルからメタデータを取得し、バケットからHTMLを取得"""
 
-    # http_request_queueテーブルからメタデータを取得
+    # request_task_queueテーブルからメタデータを取得
     statement = select(RequestTaskRecord).where(
         RequestTaskRecord.id == http_request_id
     )
