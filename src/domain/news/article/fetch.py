@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from domain.news.task_queue.http_request.model import HttpRequestTask
-from infra.app_log import get_logger
+from infra.logger import get_logger
 from infra.web.https import HTTP_STATUS_OK, HttpResponse, HttpsClient
 
 from .model import Article

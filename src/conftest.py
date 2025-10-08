@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from infra.app_log import configure_logging, reset_logging
+from infra.logger import configure_logging, reset_logging
 
 
 @pytest.fixture

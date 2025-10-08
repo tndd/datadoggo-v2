@@ -9,7 +9,7 @@ from xml.etree.ElementTree import Element
 
 import pytest
 
-from infra.app_log import get_logger
+from infra.logger import get_logger
 from infra.storage.file import load_bytes
 
 RSS_INPUT = Union[str, bytes, bytearray]

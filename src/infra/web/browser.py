@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from pydoll.browser.chromium import Chrome
 from pydoll.browser.options import ChromiumOptions
 
-from infra.app_log import get_logger
+from infra.logger import get_logger
 
 LOG = get_logger()
 

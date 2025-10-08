@@ -9,7 +9,7 @@ from typing import Iterator, TypeVar
 from sqlalchemy.engine import Engine, make_url
 from sqlmodel import Session, SQLModel, create_engine
 
-from infra.app_log import get_logger
+from infra.logger import get_logger
 
 T = TypeVar("T", bound=SQLModel)
 
